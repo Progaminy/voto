@@ -27,19 +27,38 @@ function applyAdminAccessMode(level = sessionStorage.getItem(ADMIN_ACCESS_KEY) |
     topbarTitle.insertAdjacentElement('afterend', badge);
   }
   if (badge) {
-    badge.textContent = readonly ? 'Consulta · sem edição' : full ? 'Acesso total' : '';
+    badge.textContent = readonly ? 'Somente visualização' : full ? 'Acesso total' : '';
     badge.classList.toggle('readonly', readonly);
     badge.hidden = !readonly && !full;
   }
 
-  document.querySelectorAll('#electionForm input').forEach(input => {
-    input.disabled = readonly;
+  // O código de consulta nunca deve mostrar controlos que alterem dados.
+  const readonlyCards = [
+    '#positionForm',
+    '#candidateForm',
+    '#voterForm',
+    '#bulkVoterForm'
+  ];
+  readonlyCards.forEach(selector => {
+    document.querySelector(selector)?.closest('.form-card')?.classList.toggle('readonly-hidden', readonly);
   });
-  document.querySelector('#electionForm button[type="submit"]')?.classList.toggle('readonly-hidden', readonly);
+
+  document.querySelector('[data-admin-view="settings"]')?.classList.toggle('readonly-hidden', readonly);
+  document.querySelector('#adminViewSettings')?.classList.toggle('readonly-hidden', readonly);
+  document.querySelector('#toggleElectionBtn')?.classList.toggle('readonly-hidden', readonly);
   document.querySelector('#changePinForm')?.closest('.settings-card')?.classList.toggle('readonly-hidden', readonly);
-  document.querySelector('#candidateForm')?.closest('.form-card')?.classList.toggle('readonly-hidden', readonly);
-  document.querySelector('#voterForm')?.closest('.form-card')?.classList.toggle('readonly-hidden', readonly);
-  document.querySelector('#bulkVoterForm')?.closest('.form-card')?.classList.toggle('readonly-hidden', readonly);
+
+  document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn').forEach(el => {
+    el.classList.toggle('readonly-hidden', readonly);
+  });
+
+  const positionHelp = document.querySelector('.position-editor-help');
+  if (positionHelp && readonly) positionHelp.textContent = 'Consulta das vagas registadas. Este acesso não permite alterações.';
+
+  // Se a sessão de consulta estiver numa área de edição, regressa aos resultados.
+  if (readonly && document.querySelector('#adminViewSettings')?.classList.contains('active')) {
+    document.querySelector('[data-admin-view="results"]')?.click();
+  }
 }
 
 window.fetch = async (input, init = {}) => {
@@ -51,7 +70,7 @@ window.fetch = async (input, init = {}) => {
   if (isAdminCall) {
     const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
     headers.set('apikey', SUPABASE_PUBLIC_KEY);
-    headers.set('x-client-info', 'axinene-voto/1.2');
+    headers.set('x-client-info', 'axinene-voto/1.3');
     requestInit = { ...init, headers };
   }
 
@@ -113,14 +132,15 @@ runtimeStyles.textContent = `
   body.admin-readonly .delete-candidate,
   body.admin-readonly .delete-voter,
   body.admin-readonly .position-edit-btn,
-  body.admin-readonly #positionForm {
+  body.admin-readonly #positionForm,
+  body.admin-readonly #candidateForm,
+  body.admin-readonly #voterForm,
+  body.admin-readonly #bulkVoterForm,
+  body.admin-readonly #changePinForm,
+  body.admin-readonly #electionForm,
+  body.admin-readonly [data-admin-view="settings"],
+  body.admin-readonly #adminViewSettings {
     display: none !important;
-  }
-  body.admin-readonly #electionForm input:disabled {
-    opacity: 1;
-    color: var(--ink);
-    background: #f5f7fa;
-    cursor: default;
   }
   .print-result-btn { white-space: nowrap; }
   .print-only { display: none; }
@@ -171,8 +191,8 @@ document.head.appendChild(runtimeStyles);
 
 applyAdminAccessMode();
 
-await import('./app-core.js?v=20260825-2319');
-await import('./admin-position-edit.js?v=20260825-2319');
+await import('./app-core.js?v=20260825-2335');
+await import('./admin-position-edit.js?v=20260825-2335');
 
 function showRuntimeToast(message, type = 'info') {
   const region = document.getElementById('toastRegion');
@@ -244,12 +264,36 @@ async function forceDeleteVoter(button) {
   }
 }
 
+function readonlyBlocksElement(target) {
+  if (sessionStorage.getItem(ADMIN_ACCESS_KEY) !== 'readonly') return false;
+  return Boolean(target.closest?.(
+    '#toggleElectionBtn, .delete-candidate, .delete-voter, .position-edit-btn, #positionForm, #candidateForm, #voterForm, #bulkVoterForm, #changePinForm, #electionForm, [data-admin-view="settings"]'
+  ));
+}
+
+// Segunda barreira no navegador: o acesso 299792 é exclusivamente visual.
 document.addEventListener('click', event => {
+  if (readonlyBlocksElement(event.target)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    showRuntimeToast('Este acesso é somente para visualização.', 'error');
+    return;
+  }
+
   const deleteButton = event.target.closest?.('.delete-voter');
   if (deleteButton && sessionStorage.getItem(ADMIN_ACCESS_KEY) === 'full') {
     event.preventDefault();
     event.stopImmediatePropagation();
     forceDeleteVoter(deleteButton);
+  }
+}, true);
+
+document.addEventListener('submit', event => {
+  if (sessionStorage.getItem(ADMIN_ACCESS_KEY) !== 'readonly') return;
+  if (event.target.matches?.('#positionForm, #candidateForm, #voterForm, #bulkVoterForm, #changePinForm, #electionForm, #positionEditForm')) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    showRuntimeToast('Este acesso é somente para visualização.', 'error');
   }
 }, true);
 
