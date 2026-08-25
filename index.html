@@ -14,7 +14,7 @@
   <header class="site-header">
     <div class="header-inner shell">
       <a class="brand" href="#inicio" aria-label="Comissão Eleitoral AXINENE">
-        <span class="brand-mark"><img src="assets/axinene-eleitoral.jpg" alt="Símbolo da Comissão Eleitoral Interna AXINENE" /></span>
+        <span class="brand-mark"><img src="assets/axinene-eleitoral.jpg?v=3" alt="Símbolo da Comissão Eleitoral Interna AXINENE" /></span>
         <span class="brand-copy">
           <strong>Comissão Eleitoral</strong>
           <small>AXINENE</small>
@@ -37,9 +37,9 @@
             <span>Confirmação imediata</span>
           </div>
         </div>
-        <div class="hero-logo-wrap" aria-hidden="true">
+        <div class="hero-logo-wrap">
           <div class="hero-logo-glow"></div>
-          <img class="hero-logo" src="assets/axinene-eleitoral.jpg" alt="" />
+          <img class="hero-logo" src="assets/axinene-eleitoral.jpg?v=3" alt="Comissão Eleitoral Interna AXINENE" />
         </div>
       </div>
     </section>
@@ -113,16 +113,17 @@
         <button id="backToPublicBtn" class="back-link" type="button">← Voltar à votação</button>
         <span class="eyebrow">Acesso restrito</span>
         <h1>Administrador</h1>
-        <p>Entre com a conta administrativa já registada no Supabase.</p>
+        <p>Introduza o PIN administrativo de 6 dígitos.</p>
         <form id="adminLoginForm" class="stack-form">
-          <label>E-mail
-            <input id="adminEmail" type="email" autocomplete="username" required />
-          </label>
-          <label>Palavra-passe
-            <input id="adminPassword" type="password" autocomplete="current-password" required />
+          <label>PIN
+            <input id="adminPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="••••••" required />
           </label>
           <button id="adminLoginBtn" class="btn btn-primary btn-full" type="submit">Entrar</button>
         </form>
+        <div class="privacy-note">
+          <span class="lock-icon">✓</span>
+          <p>O PIN não fica guardado no navegador. Depois do acesso é criada uma sessão administrativa temporária.</p>
+        </div>
       </div>
     </section>
 
@@ -264,25 +265,41 @@
         </section>
 
         <section id="adminViewSettings" class="admin-view hidden">
-          <div class="card form-card settings-card">
-            <h2>Dados da eleição</h2>
-            <form id="electionForm" class="stack-form">
-              <label>Título
-                <input id="electionTitle" type="text" required />
-              </label>
-              <label>Organização
-                <input id="electionOrganization" type="text" required />
-              </label>
-              <div class="form-row">
-                <label>Abertura <span class="optional">opcional</span>
-                  <input id="electionOpensAt" type="datetime-local" />
+          <div class="admin-two-col">
+            <div class="card form-card settings-card">
+              <h2>Dados da eleição</h2>
+              <form id="electionForm" class="stack-form">
+                <label>Título
+                  <input id="electionTitle" type="text" required />
                 </label>
-                <label>Encerramento <span class="optional">opcional</span>
-                  <input id="electionClosesAt" type="datetime-local" />
+                <label>Organização
+                  <input id="electionOrganization" type="text" required />
                 </label>
-              </div>
-              <button class="btn btn-primary" type="submit">Guardar alterações</button>
-            </form>
+                <div class="form-row">
+                  <label>Abertura <span class="optional">opcional</span>
+                    <input id="electionOpensAt" type="datetime-local" />
+                  </label>
+                  <label>Encerramento <span class="optional">opcional</span>
+                    <input id="electionClosesAt" type="datetime-local" />
+                  </label>
+                </div>
+                <button class="btn btn-primary" type="submit">Guardar alterações</button>
+              </form>
+            </div>
+
+            <div class="card form-card settings-card">
+              <h2>Segurança</h2>
+              <p class="form-help">Altere o PIN sempre que necessário. O novo PIN deve ter exatamente 6 dígitos.</p>
+              <form id="changePinForm" class="stack-form">
+                <label>Novo PIN
+                  <input id="newAdminPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="••••••" required />
+                </label>
+                <label>Confirmar novo PIN
+                  <input id="confirmAdminPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="••••••" required />
+                </label>
+                <button class="btn btn-secondary" type="submit">Alterar PIN</button>
+              </form>
+            </div>
           </div>
         </section>
       </div>
@@ -309,6 +326,6 @@
     </div>
   </dialog>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=4"></script>
 </body>
 </html>
