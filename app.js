@@ -2,8 +2,10 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = 'https://uvypcuixxrjikjaduvyo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_BTEfqQcnOfeZiVXjS1q3DQ_EFWeyMRj';
+const ADMIN_EDGE_URL = `${SUPABASE_URL}/functions/v1/vote-admin`;
+const ADMIN_SESSION_KEY = 'axinene_admin_pin_session';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 });
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -33,7 +35,7 @@ const state = {
   myVotes: [],
   pendingCandidateId: null,
   admin: {
-    session: null,
+    token: sessionStorage.getItem(ADMIN_SESSION_KEY),
     elections: [],
     election: null,
     positions: [],
@@ -41,8 +43,9 @@ const state = {
     voters: [],
     results: [],
     participation: [],
-    realtimeChannel: null,
-    refreshTimer: null
+    stats: {},
+    liveTimer: null,
+    liveBusy: false
   }
 };
 
@@ -67,6 +70,7 @@ function setBusy(button, busy, busyLabel = 'A processar…') {
 }
 
 function showPublicMode() {
+  stopLivePolling();
   $('#publicApp').classList.remove('hidden');
   $('#adminApp').classList.add('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -360,37 +364,68 @@ async function confirmVote() {
   toast(data.message || 'Voto registado com sucesso.', 'success');
 }
 
-async function ensureAdminState() {
-  const { data: { session } } = await supabase.auth.getSession();
-  state.admin.session = session;
-  if (!session) {
-    showAdminLogin();
-    return;
+/* ------------------------- Administração por PIN ------------------------- */
+
+async function adminApi(action, payload = {}, options = {}) {
+  const response = await fetch(ADMIN_EDGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({
+      action,
+      token: options.withoutToken ? undefined : state.admin.token,
+      ...payload
+    })
+  });
+
+  let data = {};
+  try { data = await response.json(); } catch {}
+  if (response.status === 401 && action !== 'login') {
+    clearAdminSession();
+    if (location.hash === '#admin') showAdminLogin();
   }
-  const allowed = await isAdmin();
-  if (!allowed) {
-    await supabase.auth.signOut();
-    state.admin.session = null;
-    showAdminLogin();
-    toast('Esta conta não possui permissão de administrador.', 'error');
-    return;
+  if (!response.ok || data?.ok === false) {
+    const error = new Error(data?.message || 'Operação administrativa falhou.');
+    error.status = response.status;
+    throw error;
   }
-  showAdminDashboard();
-  await loadAdminElections();
+  return data;
 }
 
-async function isAdmin() {
-  const { data, error } = await supabase.rpc('is_vote_admin');
-  if (error) {
-    console.error(error);
-    return false;
+function saveAdminSession(token) {
+  state.admin.token = token;
+  sessionStorage.setItem(ADMIN_SESSION_KEY, token);
+}
+
+function clearAdminSession() {
+  stopLivePolling();
+  state.admin.token = null;
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+}
+
+async function ensureAdminState() {
+  if (!state.admin.token) {
+    showAdminLogin();
+    return;
   }
-  return data === true;
+  try {
+    showAdminDashboard();
+    await loadAdminDashboard(state.admin.election?.id || null);
+    startLivePolling();
+  } catch (error) {
+    console.error(error);
+    clearAdminSession();
+    showAdminLogin();
+    if (error.status !== 401) toast(error.message || 'Não foi possível abrir o painel.', 'error');
+  }
 }
 
 function showAdminLogin() {
+  stopLivePolling();
   $('#adminLoginView').classList.remove('hidden');
   $('#adminDashboard').classList.add('hidden');
+  $('#adminPin').value = '';
+  setTimeout(() => $('#adminPin')?.focus(), 60);
 }
 
 function showAdminDashboard() {
@@ -398,90 +433,61 @@ function showAdminDashboard() {
   $('#adminDashboard').classList.remove('hidden');
 }
 
-async function adminLogin(email, password) {
+async function adminLogin(pin) {
   const button = $('#adminLoginBtn');
   setBusy(button, true, 'A entrar…');
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  setBusy(button, false);
-  if (error) {
-    toast('E-mail ou palavra-passe incorretos.', 'error');
-    return;
+  try {
+    const data = await adminApi('login', { pin }, { withoutToken: true });
+    saveAdminSession(data.token);
+    showAdminDashboard();
+    await loadAdminDashboard();
+    startLivePolling();
+    toast('Sessão administrativa iniciada.', 'success');
+  } catch (error) {
+    toast(error.message || 'PIN incorreto.', 'error');
+  } finally {
+    setBusy(button, false);
+    $('#adminPin').value = '';
   }
-  state.admin.session = data.session;
-  if (!(await isAdmin())) {
-    await supabase.auth.signOut();
-    state.admin.session = null;
-    toast('A conta existe, mas não é administrador desta plataforma.', 'error');
-    return;
-  }
-  showAdminDashboard();
-  await loadAdminElections();
-  toast('Sessão administrativa iniciada.', 'success');
 }
 
 async function adminLogout() {
-  stopRealtime();
-  await supabase.auth.signOut();
-  state.admin.session = null;
+  try {
+    if (state.admin.token) await adminApi('logout');
+  } catch {}
+  clearAdminSession();
   showAdminLogin();
   toast('Sessão encerrada.');
 }
 
-async function loadAdminElections() {
-  const { data, error } = await supabase
-    .from('vote_elections')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) {
-    console.error(error);
-    toast('Não foi possível carregar a eleição.', 'error');
-    return;
-  }
-  state.admin.elections = data || [];
-  const select = $('#adminElectionSelect');
-  select.innerHTML = state.admin.elections.map(e => `<option value="${e.id}">${escapeHtml(e.title)} — ${escapeHtml(e.organization_name)}</option>`).join('');
-  if (!state.admin.elections.length) {
-    toast('Nenhuma eleição encontrada.', 'error');
-    return;
-  }
-  const currentId = state.admin.election?.id;
-  state.admin.election = state.admin.elections.find(e => e.id === currentId) || state.admin.elections[0];
-  select.value = state.admin.election.id;
-  await loadAdminElectionData();
+async function loadAdminDashboard(electionId = null) {
+  const data = await adminApi('dashboard', { election_id: electionId || state.admin.election?.id || null });
+  applyAdminDashboard(data);
 }
 
-async function loadAdminElectionData() {
-  const election = state.admin.election;
-  if (!election) return;
-  updateAdminElectionUI();
+function applyAdminDashboard(data) {
+  state.admin.elections = data.elections || [];
+  state.admin.election = data.election || null;
+  state.admin.positions = data.positions || [];
+  state.admin.candidates = data.candidates || [];
+  state.admin.voters = data.voters || [];
+  state.admin.results = data.results || [];
+  state.admin.participation = data.participation || [];
+  state.admin.stats = data.stats || {};
 
-  const [positionsRes, votersRes] = await Promise.all([
-    supabase.from('vote_positions').select('*').eq('election_id', election.id).order('display_order').order('title'),
-    supabase.from('vote_voters').select('*').eq('election_id', election.id).order('full_name')
-  ]);
-
-  if (positionsRes.error) console.error(positionsRes.error);
-  if (votersRes.error) console.error(votersRes.error);
-  state.admin.positions = positionsRes.data || [];
-  state.admin.voters = votersRes.data || [];
-
-  let candidates = [];
-  if (state.admin.positions.length) {
-    const { data, error } = await supabase
-      .from('vote_candidates')
-      .select('*')
-      .in('position_id', state.admin.positions.map(p => p.id))
-      .order('display_order').order('name');
-    if (error) console.error(error);
-    candidates = data || [];
+  const select = $('#adminElectionSelect');
+  if (select) {
+    select.innerHTML = state.admin.elections.map(e => `<option value="${e.id}">${escapeHtml(e.title)} — ${escapeHtml(e.organization_name)}</option>`).join('');
+    if (state.admin.election) select.value = state.admin.election.id;
   }
-  state.admin.candidates = candidates;
 
-  await Promise.all([loadAdminStats(), loadAdminResults(), loadAdminParticipation()]);
+  updateAdminElectionUI();
+  renderAdminStats();
+  renderAdminResults();
+  renderParticipation();
   renderCandidateAdmin();
-  renderVoters();
+  renderVoters($('#voterSearch')?.value || '');
   fillElectionForm();
-  startRealtime();
 }
 
 function updateAdminElectionUI() {
@@ -495,58 +501,35 @@ function updateAdminElectionUI() {
   toggle.className = election.status === 'open' ? 'btn btn-secondary' : 'btn btn-primary';
 }
 
+function renderAdminStats() {
+  const s = state.admin.stats || {};
+  $('#statVoters').textContent = s.voters ?? 0;
+  $('#statStarted').textContent = s.started ?? 0;
+  $('#statVotes').textContent = s.votes ?? 0;
+  $('#statPositions').textContent = s.positions ?? 0;
+  $('#statPercent').textContent = `${s.participation_percent ?? 0}% participação`;
+}
+
 async function toggleElectionStatus() {
   const election = state.admin.election;
   if (!election) return;
-  const newStatus = election.status === 'open' ? 'closed' : 'open';
-  if (newStatus === 'open' && (!state.admin.positions.length || !state.admin.candidates.length || !state.admin.voters.length)) {
+  const opening = election.status !== 'open';
+  if (opening && (!state.admin.positions.length || !state.admin.candidates.length || !state.admin.voters.length)) {
     const ok = confirm('A lista ainda parece incompleta. Deseja abrir a votação mesmo assim?');
     if (!ok) return;
   }
   const button = $('#toggleElectionBtn');
   setBusy(button, true, 'A atualizar…');
-  const patch = { status: newStatus, updated_at: new Date().toISOString() };
-  if (newStatus === 'open' && !election.opens_at) patch.opens_at = new Date().toISOString();
-  if (newStatus === 'closed') patch.closes_at = new Date().toISOString();
-  const { data, error } = await supabase.from('vote_elections').update(patch).eq('id', election.id).select().single();
-  setBusy(button, false);
-  if (error) {
-    console.error(error);
-    toast('Não foi possível alterar o estado da votação.', 'error');
-    return;
+  try {
+    const result = await adminApi('toggleElection', { election_id: election.id });
+    await loadAdminDashboard(election.id);
+    toast(result.status === 'open' ? 'Votação aberta.' : 'Votação encerrada.', 'success');
+    await loadPublicElection();
+  } catch (error) {
+    toast(error.message || 'Não foi possível alterar o estado da votação.', 'error');
+  } finally {
+    setBusy(button, false);
   }
-  state.admin.election = data;
-  const idx = state.admin.elections.findIndex(e => e.id === data.id);
-  if (idx >= 0) state.admin.elections[idx] = data;
-  updateAdminElectionUI();
-  fillElectionForm();
-  toast(newStatus === 'open' ? 'Votação aberta.' : 'Votação encerrada.', 'success');
-  await loadPublicElection();
-}
-
-async function loadAdminStats() {
-  if (!state.admin.election) return;
-  const { data, error } = await supabase.rpc('vote_admin_stats', { p_election_id: state.admin.election.id });
-  if (error) {
-    console.error(error);
-    return;
-  }
-  $('#statVoters').textContent = data?.voters ?? 0;
-  $('#statStarted').textContent = data?.started ?? 0;
-  $('#statVotes').textContent = data?.votes ?? 0;
-  $('#statPositions').textContent = data?.positions ?? 0;
-  $('#statPercent').textContent = `${data?.participation_percent ?? 0}% participação`;
-}
-
-async function loadAdminResults() {
-  if (!state.admin.election) return;
-  const { data, error } = await supabase.rpc('vote_admin_results', { p_election_id: state.admin.election.id });
-  if (error) {
-    console.error(error);
-    return;
-  }
-  state.admin.results = data || [];
-  renderAdminResults();
 }
 
 function renderAdminResults() {
@@ -571,23 +554,12 @@ function renderAdminResults() {
         const avatar = row.photo_url ? `<img class="result-avatar" src="${escapeHtml(row.photo_url)}" alt="" />` : '<span class="result-avatar"></span>';
         return `<div class="result-row">
           <div class="result-person">${avatar}<strong>${escapeHtml(row.candidate_name)}</strong></div>
-          <div class="result-bar" aria-label="${pct}%"><span style="width:${Math.min(100,pct)}%"></span></div>
+          <div class="result-bar" aria-label="${pct}%"><span style="width:${Math.min(100, pct)}%"></span></div>
           <div class="result-score">${count}<small>${pct}%</small></div>
         </div>`;
       }).join('')}
     </article>`;
   }).join('');
-}
-
-async function loadAdminParticipation() {
-  if (!state.admin.election) return;
-  const { data, error } = await supabase.rpc('vote_admin_voter_status', { p_election_id: state.admin.election.id });
-  if (error) {
-    console.error(error);
-    return;
-  }
-  state.admin.participation = data || [];
-  renderParticipation();
 }
 
 function renderParticipation() {
@@ -638,94 +610,103 @@ function renderCandidateAdmin() {
 }
 
 async function addPosition(title, description) {
-  const displayOrder = state.admin.positions.length;
-  const { error } = await supabase.from('vote_positions').insert({
-    election_id: state.admin.election.id,
-    title,
-    description: description || null,
-    display_order: displayOrder
-  });
-  if (error) {
-    console.error(error);
-    toast('Não foi possível guardar a vaga.', 'error');
+  try {
+    await adminApi('addPosition', {
+      election_id: state.admin.election.id,
+      title,
+      description,
+      display_order: state.admin.positions.length
+    });
+    toast('Vaga adicionada.', 'success');
+    await loadAdminDashboard(state.admin.election.id);
+    return true;
+  } catch (error) {
+    toast(error.message || 'Não foi possível guardar a vaga.', 'error');
     return false;
   }
-  toast('Vaga adicionada.', 'success');
-  await loadAdminElectionData();
-  return true;
+}
+
+async function imageFileToDataUrl(file) {
+  if (!file?.size) return null;
+  if (!file.type.startsWith('image/')) throw new Error('Selecione uma imagem válida.');
+  if (file.size > 8 * 1024 * 1024) throw new Error('A foto deve ter no máximo 8 MB.');
+
+  const img = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = objectUrl;
+    });
+    const max = 900;
+    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 async function addCandidate({ positionId, name, manifesto, photoFile }) {
-  let photoUrl = null;
-  if (photoFile?.size) {
-    const extension = (photoFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-    const path = `${state.admin.election.id}/${crypto.randomUUID()}.${extension}`;
-    const { error: uploadError } = await supabase.storage.from('voto-candidatos').upload(path, photoFile, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: photoFile.type || undefined
+  try {
+    const photoDataUrl = await imageFileToDataUrl(photoFile);
+    await adminApi('addCandidate', {
+      election_id: state.admin.election.id,
+      position_id: positionId,
+      name,
+      manifesto,
+      photo_data_url: photoDataUrl,
+      display_order: state.admin.candidates.filter(c => c.position_id === positionId).length
     });
-    if (uploadError) {
-      console.error(uploadError);
-      toast('Não foi possível enviar a foto do candidato.', 'error');
-      return false;
-    }
-    photoUrl = supabase.storage.from('voto-candidatos').getPublicUrl(path).data.publicUrl;
-  }
-
-  const { error } = await supabase.from('vote_candidates').insert({
-    position_id: positionId,
-    name,
-    manifesto,
-    photo_url: photoUrl,
-    display_order: state.admin.candidates.filter(c => c.position_id === positionId).length
-  });
-  if (error) {
-    console.error(error);
-    toast('Não foi possível guardar o candidato.', 'error');
+    toast('Candidato registado.', 'success');
+    await loadAdminDashboard(state.admin.election.id);
+    await loadPublicElection();
+    return true;
+  } catch (error) {
+    toast(error.message || 'Não foi possível guardar o candidato.', 'error');
     return false;
   }
-  toast('Candidato registado.', 'success');
-  await loadAdminElectionData();
-  await loadPublicElection();
-  return true;
 }
 
 async function deleteCandidate(candidateId) {
   const candidate = state.admin.candidates.find(c => c.id === candidateId);
   if (!candidate || !confirm(`Remover a candidatura de ${candidate.name}?`)) return;
-  const { error } = await supabase.from('vote_candidates').delete().eq('id', candidateId);
-  if (error) {
-    console.error(error);
-    toast('Não é possível remover este candidato. Pode já existir voto registado.', 'error');
-    return;
+  try {
+    await adminApi('deleteCandidate', { candidate_id: candidateId });
+    toast('Candidato removido.');
+    await loadAdminDashboard(state.admin.election.id);
+    await loadPublicElection();
+  } catch (error) {
+    toast(error.message || 'Não é possível remover este candidato. Pode já existir voto registado.', 'error');
   }
-  toast('Candidato removido.');
-  await loadAdminElectionData();
-  await loadPublicElection();
 }
 
 async function addVoter({ fullName, memberNumber, phone }) {
-  const { error } = await supabase.from('vote_voters').insert({
-    election_id: state.admin.election.id,
-    full_name: fullName,
-    member_number: memberNumber || null,
-    phone: phone || null
-  });
-  if (error) {
-    console.error(error);
-    toast('Não foi possível adicionar. Verifique se o número de membro ou telefone já existe.', 'error');
+  try {
+    await adminApi('addVoter', {
+      election_id: state.admin.election.id,
+      full_name: fullName,
+      member_number: memberNumber,
+      phone
+    });
+    toast('Eleitor adicionado.', 'success');
+    await loadAdminDashboard(state.admin.election.id);
+    return true;
+  } catch (error) {
+    toast(error.message || 'Não foi possível adicionar o eleitor.', 'error');
     return false;
   }
-  toast('Eleitor adicionado.', 'success');
-  await loadAdminElectionData();
-  return true;
 }
 
 async function bulkAddVoters(raw) {
   const rows = raw.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
     const [fullName = '', memberNumber = '', phone = ''] = line.split(';').map(v => v.trim());
-    return { full_name: fullName, member_number: memberNumber || null, phone: phone || null };
+    return { full_name: fullName, member_number: memberNumber || '', phone: phone || '' };
   }).filter(row => row.full_name);
 
   if (!rows.length) {
@@ -749,22 +730,25 @@ async function bulkAddVoters(raw) {
     if (member) batchMembers.add(member);
     if (phone) batchPhones.add(phone);
     return true;
-  }).map(row => ({ ...row, election_id: state.admin.election.id }));
+  });
 
   if (!safeRows.length) {
     toast('Todos os registos já existem ou estão duplicados.', 'error');
     return false;
   }
 
-  const { error } = await supabase.from('vote_voters').insert(safeRows);
-  if (error) {
-    console.error(error);
-    toast('A importação falhou. Verifique os dados da lista.', 'error');
+  try {
+    const result = await adminApi('bulkAddVoters', {
+      election_id: state.admin.election.id,
+      rows: safeRows
+    });
+    toast(`${result.count || safeRows.length} eleitor(es) importado(s)${ignored ? `; ${ignored} duplicado(s) ignorado(s)` : ''}.`, 'success', 5000);
+    await loadAdminDashboard(state.admin.election.id);
+    return true;
+  } catch (error) {
+    toast(error.message || 'A importação falhou. Verifique os dados da lista.', 'error');
     return false;
   }
-  toast(`${safeRows.length} eleitor(es) importado(s)${ignored ? `; ${ignored} duplicado(s) ignorado(s)` : ''}.`, 'success', 5000);
-  await loadAdminElectionData();
-  return true;
 }
 
 function renderVoters(filter = '') {
@@ -789,14 +773,13 @@ function renderVoters(filter = '') {
 async function deleteVoter(voterId) {
   const voter = state.admin.voters.find(v => v.id === voterId);
   if (!voter || !confirm(`Remover ${voter.full_name} da lista autorizada?`)) return;
-  const { error } = await supabase.from('vote_voters').delete().eq('id', voterId);
-  if (error) {
-    console.error(error);
-    toast('Não é possível remover este eleitor porque já existem votos associados.', 'error');
-    return;
+  try {
+    await adminApi('deleteVoter', { voter_id: voterId });
+    toast('Eleitor removido.');
+    await loadAdminDashboard(state.admin.election.id);
+  } catch (error) {
+    toast(error.message || 'Não é possível remover este eleitor porque já existem votos associados.', 'error');
   }
-  toast('Eleitor removido.');
-  await loadAdminElectionData();
 }
 
 function fillElectionForm() {
@@ -810,52 +793,76 @@ function fillElectionForm() {
 
 async function saveElectionSettings() {
   const e = state.admin.election;
-  if (!e) return;
-  const patch = {
-    title: $('#electionTitle').value.trim(),
-    organization_name: $('#electionOrganization').value.trim(),
-    opens_at: $('#electionOpensAt').value ? new Date($('#electionOpensAt').value).toISOString() : null,
-    closes_at: $('#electionClosesAt').value ? new Date($('#electionClosesAt').value).toISOString() : null,
-    updated_at: new Date().toISOString()
-  };
-  const { data, error } = await supabase.from('vote_elections').update(patch).eq('id', e.id).select().single();
-  if (error) {
-    console.error(error);
-    toast('Não foi possível guardar os dados da eleição.', 'error');
+  if (!e) return false;
+  try {
+    await adminApi('saveElection', {
+      election_id: e.id,
+      title: $('#electionTitle').value.trim(),
+      organization_name: $('#electionOrganization').value.trim(),
+      opens_at: $('#electionOpensAt').value ? new Date($('#electionOpensAt').value).toISOString() : null,
+      closes_at: $('#electionClosesAt').value ? new Date($('#electionClosesAt').value).toISOString() : null
+    });
+    toast('Dados da eleição guardados.', 'success');
+    await loadAdminDashboard(e.id);
+    await loadPublicElection();
+    return true;
+  } catch (error) {
+    toast(error.message || 'Não foi possível guardar os dados da eleição.', 'error');
     return false;
   }
-  state.admin.election = data;
-  const index = state.admin.elections.findIndex(item => item.id === data.id);
-  if (index >= 0) state.admin.elections[index] = data;
-  $('#adminElectionSelect').selectedOptions[0].textContent = `${data.title} — ${data.organization_name}`;
-  toast('Dados da eleição guardados.', 'success');
-  await loadPublicElection();
-  return true;
 }
 
-function startRealtime() {
-  stopRealtime();
-  const electionId = state.admin.election?.id;
-  if (!electionId) return;
-  state.admin.realtimeChannel = supabase
-    .channel(`vote-admin-${electionId}-${Date.now()}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vote_tallies', filter: `election_id=eq.${electionId}` }, scheduleRealtimeRefresh)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vote_participation', filter: `election_id=eq.${electionId}` }, scheduleRealtimeRefresh)
-    .subscribe();
-}
-
-function stopRealtime() {
-  if (state.admin.realtimeChannel) {
-    supabase.removeChannel(state.admin.realtimeChannel);
-    state.admin.realtimeChannel = null;
+async function changeAdminPin(newPin, confirmPin) {
+  if (!/^\d{6}$/.test(newPin)) {
+    toast('O PIN deve ter exatamente 6 dígitos.', 'error');
+    return false;
+  }
+  if (newPin !== confirmPin) {
+    toast('Os dois PINs não coincidem.', 'error');
+    return false;
+  }
+  try {
+    const data = await adminApi('changePin', { new_pin: newPin });
+    toast(data.message || 'PIN alterado com sucesso.', 'success');
+    return true;
+  } catch (error) {
+    toast(error.message || 'Não foi possível alterar o PIN.', 'error');
+    return false;
   }
 }
 
-function scheduleRealtimeRefresh() {
-  clearTimeout(state.admin.refreshTimer);
-  state.admin.refreshTimer = setTimeout(async () => {
-    await Promise.all([loadAdminStats(), loadAdminResults(), loadAdminParticipation()]);
-  }, 220);
+function startLivePolling() {
+  stopLivePolling();
+  state.admin.liveTimer = setInterval(refreshLiveAdmin, 1500);
+}
+
+function stopLivePolling() {
+  if (state.admin.liveTimer) {
+    clearInterval(state.admin.liveTimer);
+    state.admin.liveTimer = null;
+  }
+}
+
+async function refreshLiveAdmin() {
+  if (!state.admin.token || state.admin.liveBusy || location.hash !== '#admin' || $('#adminDashboard').classList.contains('hidden')) return;
+  state.admin.liveBusy = true;
+  try {
+    const data = await adminApi('dashboard', { election_id: state.admin.election?.id || null });
+    state.admin.results = data.results || [];
+    state.admin.participation = data.participation || [];
+    state.admin.stats = data.stats || {};
+    if (data.election) {
+      state.admin.election = data.election;
+      updateAdminElectionUI();
+    }
+    renderAdminStats();
+    renderAdminResults();
+    renderParticipation();
+  } catch (error) {
+    if (error.status !== 401) console.error(error);
+  } finally {
+    state.admin.liveBusy = false;
+  }
 }
 
 function setAdminView(view) {
@@ -864,6 +871,8 @@ function setAdminView(view) {
   const section = $(`#adminView${view.charAt(0).toUpperCase()}${view.slice(1)}`);
   section?.classList.remove('hidden');
 }
+
+/* ------------------------- Eventos ------------------------- */
 
 $('#adminEntryBtn').addEventListener('click', () => { location.hash = 'admin'; });
 $('#backToPublicBtn').addEventListener('click', () => { location.hash = 'inicio'; });
@@ -888,13 +897,21 @@ $$('[data-close-dialog]').forEach(btn => btn.addEventListener('click', () => btn
 
 $('#adminLoginForm').addEventListener('submit', event => {
   event.preventDefault();
-  adminLogin($('#adminEmail').value.trim(), $('#adminPassword').value);
+  const pin = $('#adminPin').value.replace(/\D/g, '').slice(0, 6);
+  if (pin.length === 6) adminLogin(pin);
+  else toast('Informe um PIN de 6 dígitos.', 'error');
+});
+$('#adminPin').addEventListener('input', event => {
+  event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6);
 });
 $('#adminLogoutBtn').addEventListener('click', adminLogout);
 $('#toggleElectionBtn').addEventListener('click', toggleElectionStatus);
 $('#adminElectionSelect').addEventListener('change', async event => {
-  state.admin.election = state.admin.elections.find(e => e.id === event.target.value) || null;
-  await loadAdminElectionData();
+  try {
+    await loadAdminDashboard(event.target.value);
+  } catch (error) {
+    toast(error.message || 'Não foi possível mudar de eleição.', 'error');
+  }
 });
 
 $$('.admin-tab').forEach(tab => tab.addEventListener('click', () => setAdminView(tab.dataset.adminView)));
@@ -958,9 +975,18 @@ $('#electionForm').addEventListener('submit', async event => {
   setBusy(button, false);
 });
 
-supabase.auth.onAuthStateChange((_event, session) => {
-  state.admin.session = session;
+$('#changePinForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = $('button[type="submit"]', form);
+  setBusy(button, true, 'A alterar…');
+  const ok = await changeAdminPin($('#newAdminPin').value, $('#confirmAdminPin').value);
+  setBusy(button, false);
+  if (ok) form.reset();
 });
+['#newAdminPin', '#confirmAdminPin'].forEach(selector => $(selector).addEventListener('input', event => {
+  event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6);
+}));
 
 await loadPublicElection();
 route();
