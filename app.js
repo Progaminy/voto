@@ -33,3 +33,4 @@ footerFix.textContent = `
 document.head.appendChild(footerFix);
 
 await import('./app-core.js?v=20260825-2105');
+await import('./admin-position-edit.js?v=20260825-2238');
