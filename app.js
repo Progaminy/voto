@@ -43,6 +43,7 @@ function applyAdminAccessMode(level = sessionStorage.getItem(ADMIN_ACCESS_KEY) |
   document.querySelector('#adminViewSettings')?.classList.toggle('readonly-hidden', readonly);
   document.querySelector('#toggleElectionBtn')?.classList.toggle('readonly-hidden', readonly);
   document.querySelector('#changePinForm')?.closest('.settings-card')?.classList.toggle('readonly-hidden', readonly);
+  document.querySelector('#printResultsBtn')?.classList.toggle('readonly-hidden', readonly);
 
   document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn').forEach(el => {
     el.classList.toggle('readonly-hidden', readonly);
@@ -58,7 +59,7 @@ window.fetch = async (input, init = {}) => {
   if (isAdminCall) {
     const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
     headers.set('apikey', SUPABASE_PUBLIC_KEY);
-    headers.set('x-client-info', 'axinene-voto/1.5');
+    headers.set('x-client-info', 'axinene-voto/1.6');
     requestInit = { ...init, headers };
   }
 
@@ -108,6 +109,7 @@ runtimeStyles.textContent = `
   body.admin-readonly .delete-candidate,
   body.admin-readonly .delete-voter,
   body.admin-readonly .position-edit-btn,
+  body.admin-readonly #printResultsBtn,
   body.admin-readonly #positionForm,
   body.admin-readonly #candidateForm,
   body.admin-readonly #voterForm,
@@ -136,14 +138,23 @@ runtimeStyles.textContent = `
     .print-report-header p { margin: 2px 0; font-size: 11px; color: #444; }
     .result-position { break-inside: avoid; box-shadow: none !important; border: 1px solid #bbb !important; margin-bottom: 12px !important; }
     .result-bar { border: 1px solid #aaa; }
+
+    body.admin-readonly * { display: none !important; }
+    body.admin-readonly::before {
+      content: 'Impressão não autorizada para este acesso.';
+      display: block !important;
+      padding: 24px;
+      font: 700 16px/1.4 system-ui, sans-serif;
+      color: #111;
+    }
   }
 `;
 document.head.appendChild(runtimeStyles);
 
 applyAdminAccessMode();
 
-await import('./app-core.js?v=20260826-0001');
-await import('./admin-position-edit.js?v=20260826-0001');
+await import('./app-core.js?v=20260826-0015');
+await import('./admin-position-edit.js?v=20260826-0015');
 
 function showRuntimeToast(message, type = 'info') {
   const region = document.getElementById('toastRegion');
@@ -175,11 +186,17 @@ function ensurePrintButton() {
   }
 
   button.addEventListener('click', () => {
+    if (sessionStorage.getItem(ADMIN_ACCESS_KEY) !== 'full') {
+      showRuntimeToast('Este acesso não tem permissão para imprimir.', 'error');
+      return;
+    }
     const electionText = document.getElementById('adminElectionSelect')?.selectedOptions?.[0]?.textContent?.trim() || 'Comissão Eleitoral Interna — AXINENE';
     const printedAt = new Intl.DateTimeFormat('pt-MZ', { dateStyle: 'long', timeStyle: 'short' }).format(new Date());
     reportHeader.innerHTML = `<h1>Resultado da votação</h1><p>${electionText}</p><p>Impresso em ${printedAt}</p>`;
     window.print();
   });
+
+  applyAdminAccessMode();
 }
 
 async function forceDeleteVoter(button) {
@@ -212,14 +229,14 @@ async function forceDeleteVoter(button) {
 
 function readonlyBlocksElement(target) {
   if (sessionStorage.getItem(ADMIN_ACCESS_KEY) !== 'readonly') return false;
-  return Boolean(target.closest?.('#toggleElectionBtn, .delete-candidate, .delete-voter, .position-edit-btn, #positionForm, #candidateForm, #voterForm, #bulkVoterForm, #changePinForm, #electionForm, [data-admin-view="settings"]'));
+  return Boolean(target.closest?.('#toggleElectionBtn, #printResultsBtn, .delete-candidate, .delete-voter, .position-edit-btn, #positionForm, #candidateForm, #voterForm, #bulkVoterForm, #changePinForm, #electionForm, [data-admin-view="settings"]'));
 }
 
 document.addEventListener('click', event => {
   if (readonlyBlocksElement(event.target)) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    showRuntimeToast('Este acesso é somente para visualização.', 'error');
+    showRuntimeToast('Este acesso é somente para visualização e não permite imprimir.', 'error');
     return;
   }
   const deleteButton = event.target.closest?.('.delete-voter');
