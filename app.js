@@ -49,9 +49,6 @@ function applyAdminAccessMode(level = sessionStorage.getItem(ADMIN_ACCESS_KEY) |
   });
 }
 
-// Todas as chamadas à Edge Function recebem a chave pública.
-// Importante: não alteramos o DOM dentro do ciclo da resposta fetch; isso evitava
-// que o MutationObserver prendesse a página em "A entrar...".
 window.fetch = async (input, init = {}) => {
   const url = typeof input === 'string' ? input : input?.url || '';
   const isAdminCall = url.includes('/functions/v1/vote-admin');
@@ -61,7 +58,7 @@ window.fetch = async (input, init = {}) => {
   if (isAdminCall) {
     const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
     headers.set('apikey', SUPABASE_PUBLIC_KEY);
-    headers.set('x-client-info', 'axinene-voto/1.4');
+    headers.set('x-client-info', 'axinene-voto/1.5');
     requestInit = { ...init, headers };
   }
 
@@ -145,8 +142,8 @@ document.head.appendChild(runtimeStyles);
 
 applyAdminAccessMode();
 
-await import('./app-core.js?v=20260825-2355');
-await import('./admin-position-edit.js?v=20260825-2355');
+await import('./app-core.js?v=20260826-0001');
+await import('./admin-position-edit.js?v=20260826-0001');
 
 function showRuntimeToast(message, type = 'info') {
   const region = document.getElementById('toastRegion');
@@ -242,7 +239,6 @@ document.addEventListener('submit', event => {
   }
 }, true);
 
-// Observa apenas novos elementos. Não observa alterações de classe, evitando recursão.
 let uiRefreshQueued = false;
 const observer = new MutationObserver(() => {
   if (uiRefreshQueued) return;
