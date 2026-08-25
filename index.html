@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0757b6" />
+  <meta name="description" content="Plataforma de votação interna da Comissão Eleitoral AXINENE" />
+  <title>Comissão Eleitoral Interna — AXINENE</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+
+  <header class="site-header">
+    <div class="header-inner shell">
+      <a class="brand" href="#inicio" aria-label="Comissão Eleitoral AXINENE">
+        <span class="brand-mark"><img src="assets/axinene-eleitoral.jpg" alt="Símbolo da Comissão Eleitoral Interna AXINENE" /></span>
+        <span class="brand-copy">
+          <strong>Comissão Eleitoral</strong>
+          <small>AXINENE</small>
+        </span>
+      </a>
+      <button id="adminEntryBtn" class="admin-link" type="button" aria-label="Área do administrador">Administrador</button>
+    </div>
+  </header>
+
+  <main id="publicApp">
+    <section id="inicio" class="hero">
+      <div class="shell hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Votação interna segura</span>
+          <h1>O seu voto. A sua escolha.</h1>
+          <p>Consulte os candidatos e os manifestos. Para votar, confirme primeiro que o seu nome, número de membro ou telefone consta da lista autorizada.</p>
+          <div class="hero-badges" aria-label="Características da votação">
+            <span>1 voto por vaga</span>
+            <span>Voto privado</span>
+            <span>Confirmação imediata</span>
+          </div>
+        </div>
+        <div class="hero-logo-wrap" aria-hidden="true">
+          <div class="hero-logo-glow"></div>
+          <img class="hero-logo" src="assets/axinene-eleitoral.jpg" alt="" />
+        </div>
+      </div>
+    </section>
+
+    <section class="shell content-section">
+      <div id="electionNotice" class="notice-card loading-card">
+        <span class="pulse-dot"></span>
+        <div>
+          <strong>A carregar a votação…</strong>
+          <p>Estamos a consultar o estado atual da eleição.</p>
+        </div>
+      </div>
+
+      <div id="voterArea" class="voter-layout hidden">
+        <section class="verify-card card">
+          <div class="section-heading compact">
+            <span class="step">1</span>
+            <div>
+              <h2>Confirme a sua identidade</h2>
+              <p>Use apenas um dos dados registados previamente pela comissão.</p>
+            </div>
+          </div>
+
+          <div class="verify-tabs" role="tablist" aria-label="Forma de identificação">
+            <button class="verify-tab active" type="button" data-placeholder="Digite o seu nome completo">Nome</button>
+            <button class="verify-tab" type="button" data-placeholder="Digite o número de membro">N.º de membro</button>
+            <button class="verify-tab" type="button" data-placeholder="Ex.: 84 000 0000">Telefone</button>
+          </div>
+
+          <form id="verifyForm" class="verify-form">
+            <label for="identifierInput">Dado de verificação</label>
+            <div class="input-action-row">
+              <input id="identifierInput" type="text" autocomplete="off" placeholder="Digite o seu nome completo" required />
+              <button id="verifyBtn" class="btn btn-primary" type="submit">Verificar</button>
+            </div>
+          </form>
+
+          <div class="privacy-note">
+            <span class="lock-icon">✓</span>
+            <p>A lista de eleitores não é exibida publicamente. Os seus dados são usados apenas para confirmar o direito de voto.</p>
+          </div>
+        </section>
+
+        <section id="verifiedCard" class="verified-card card hidden">
+          <div class="verified-icon">✓</div>
+          <div>
+            <span>Eleitor confirmado</span>
+            <h3 id="verifiedName">—</h3>
+            <p>Você pode votar uma única vez em cada vaga.</p>
+          </div>
+          <button id="changeVoterBtn" class="text-btn" type="button">Sair</button>
+        </section>
+      </div>
+    </section>
+
+    <section id="ballotSection" class="shell ballot-section hidden">
+      <div class="section-heading">
+        <span class="step">2</span>
+        <div>
+          <h2>Candidaturas</h2>
+          <p>Clique em <strong>Ver manifesto</strong> para conhecer a proposta de cada candidato.</p>
+        </div>
+      </div>
+      <div id="positionsList" class="positions-list"></div>
+    </section>
+  </main>
+
+  <main id="adminApp" class="admin-app hidden">
+    <section id="adminLoginView" class="admin-login shell">
+      <div class="admin-login-card card">
+        <button id="backToPublicBtn" class="back-link" type="button">← Voltar à votação</button>
+        <span class="eyebrow">Acesso restrito</span>
+        <h1>Administrador</h1>
+        <p>Entre com a conta administrativa já registada no Supabase.</p>
+        <form id="adminLoginForm" class="stack-form">
+          <label>E-mail
+            <input id="adminEmail" type="email" autocomplete="username" required />
+          </label>
+          <label>Palavra-passe
+            <input id="adminPassword" type="password" autocomplete="current-password" required />
+          </label>
+          <button id="adminLoginBtn" class="btn btn-primary btn-full" type="submit">Entrar</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="adminDashboard" class="admin-dashboard hidden">
+      <div class="admin-topbar">
+        <div class="shell admin-topbar-inner">
+          <div>
+            <span class="eyebrow light">Painel de controlo</span>
+            <h1>Comissão Eleitoral Interna</h1>
+          </div>
+          <div class="admin-top-actions">
+            <button id="publicPreviewBtn" class="btn btn-ghost-light" type="button">Ver página pública</button>
+            <button id="adminLogoutBtn" class="btn btn-white" type="button">Sair</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="shell admin-content">
+        <div id="adminElectionSelectorWrap" class="admin-election-bar card">
+          <label for="adminElectionSelect">Eleição</label>
+          <select id="adminElectionSelect"></select>
+          <span id="adminElectionStatus" class="status-pill">—</span>
+          <button id="toggleElectionBtn" class="btn btn-primary" type="button">Abrir votação</button>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card"><span>Eleitores</span><strong id="statVoters">0</strong><small>autorizados</small></article>
+          <article class="stat-card"><span>Participaram</span><strong id="statStarted">0</strong><small id="statPercent">0%</small></article>
+          <article class="stat-card"><span>Votos registados</span><strong id="statVotes">0</strong><small>todas as vagas</small></article>
+          <article class="stat-card"><span>Vagas</span><strong id="statPositions">0</strong><small>em disputa</small></article>
+        </div>
+
+        <nav class="admin-tabs" aria-label="Áreas de administração">
+          <button class="admin-tab active" type="button" data-admin-view="results">Resultados</button>
+          <button class="admin-tab" type="button" data-admin-view="candidates">Candidaturas</button>
+          <button class="admin-tab" type="button" data-admin-view="voters">Eleitores</button>
+          <button class="admin-tab" type="button" data-admin-view="settings">Eleição</button>
+        </nav>
+
+        <section id="adminViewResults" class="admin-view active">
+          <div class="view-header">
+            <div><h2>Resultados em tempo real</h2><p>O painel atualiza automaticamente sem revelar a escolha individual de cada eleitor.</p></div>
+            <span class="live-badge"><i></i> Ao vivo</span>
+          </div>
+          <div id="adminResults" class="results-stack"></div>
+          <div class="card participation-card">
+            <div class="view-header compact-view"><div><h3>Estado de participação</h3><p>Mostra quem já participou e quantas vagas concluiu, sem mostrar em quem votou.</p></div></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Eleitor</th><th>N.º membro</th><th>Telefone</th><th>Estado</th></tr></thead>
+                <tbody id="participationTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="adminViewCandidates" class="admin-view hidden">
+          <div class="admin-two-col">
+            <div class="card form-card">
+              <h2>Adicionar vaga</h2>
+              <form id="positionForm" class="stack-form">
+                <label>Nome da vaga
+                  <input id="positionTitle" type="text" placeholder="Ex.: Presidente" required />
+                </label>
+                <label>Descrição <span class="optional">opcional</span>
+                  <textarea id="positionDescription" rows="3" placeholder="Breve descrição da função"></textarea>
+                </label>
+                <button class="btn btn-primary" type="submit">Guardar vaga</button>
+              </form>
+            </div>
+
+            <div class="card form-card">
+              <h2>Adicionar candidato</h2>
+              <form id="candidateForm" class="stack-form">
+                <label>Vaga
+                  <select id="candidatePosition" required></select>
+                </label>
+                <label>Nome do candidato
+                  <input id="candidateName" type="text" required />
+                </label>
+                <label>Foto do candidato
+                  <input id="candidatePhoto" type="file" accept="image/*" />
+                </label>
+                <label>Manifesto
+                  <textarea id="candidateManifesto" rows="7" placeholder="Apresente as propostas e prioridades do candidato…" required></textarea>
+                </label>
+                <button class="btn btn-primary" type="submit">Guardar candidato</button>
+              </form>
+            </div>
+          </div>
+          <div class="card admin-list-card">
+            <div class="view-header compact-view"><div><h3>Candidaturas registadas</h3><p>As candidaturas aparecem ao público quando a votação estiver aberta.</p></div></div>
+            <div id="adminCandidateList" class="admin-candidate-list"></div>
+          </div>
+        </section>
+
+        <section id="adminViewVoters" class="admin-view hidden">
+          <div class="admin-two-col voter-admin-grid">
+            <div class="card form-card">
+              <h2>Adicionar eleitor</h2>
+              <form id="voterForm" class="stack-form">
+                <label>Nome completo
+                  <input id="voterName" type="text" required />
+                </label>
+                <label>N.º de membro <span class="optional">recomendado</span>
+                  <input id="voterMember" type="text" />
+                </label>
+                <label>Telefone <span class="optional">recomendado</span>
+                  <input id="voterPhone" type="tel" />
+                </label>
+                <button class="btn btn-primary" type="submit">Adicionar à lista</button>
+              </form>
+            </div>
+
+            <div class="card form-card">
+              <h2>Importação rápida</h2>
+              <p class="form-help">Uma pessoa por linha no formato <strong>Nome; Número; Telefone</strong>. Número e telefone podem ficar vazios.</p>
+              <form id="bulkVoterForm" class="stack-form">
+                <label>Lista de eleitores
+                  <textarea id="bulkVoters" rows="10" placeholder="Ana Manuel; M001; 840000001&#10;João Alberto; M002; 840000002"></textarea>
+                </label>
+                <button class="btn btn-secondary" type="submit">Importar lista</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card admin-list-card">
+            <div class="list-toolbar">
+              <div><h3>Lista autorizada</h3><p id="voterCountLabel">0 eleitores</p></div>
+              <input id="voterSearch" class="search-input" type="search" placeholder="Pesquisar eleitor…" />
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Nome</th><th>N.º membro</th><th>Telefone</th><th>Estado</th><th></th></tr></thead>
+                <tbody id="voterTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="adminViewSettings" class="admin-view hidden">
+          <div class="card form-card settings-card">
+            <h2>Dados da eleição</h2>
+            <form id="electionForm" class="stack-form">
+              <label>Título
+                <input id="electionTitle" type="text" required />
+              </label>
+              <label>Organização
+                <input id="electionOrganization" type="text" required />
+              </label>
+              <div class="form-row">
+                <label>Abertura <span class="optional">opcional</span>
+                  <input id="electionOpensAt" type="datetime-local" />
+                </label>
+                <label>Encerramento <span class="optional">opcional</span>
+                  <input id="electionClosesAt" type="datetime-local" />
+                </label>
+              </div>
+              <button class="btn btn-primary" type="submit">Guardar alterações</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>Criado por <strong>Pensador Sem Fronteiras</strong></span>
+  </footer>
+
+  <dialog id="manifestoDialog" class="dialog manifesto-dialog">
+    <button class="dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button>
+    <div id="manifestoDialogContent"></div>
+  </dialog>
+
+  <dialog id="voteDialog" class="dialog vote-dialog">
+    <button class="dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button>
+    <div class="vote-confirm-icon">✓</div>
+    <h2>Confirmar voto</h2>
+    <p id="voteDialogText"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-ghost" type="button" data-close-dialog>Cancelar</button>
+      <button id="confirmVoteBtn" class="btn btn-primary" type="button">Confirmar voto</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
