@@ -29,7 +29,7 @@ window.fetch = async (input, init = {}) => {
 
   const labels = {
     toggleElection: 'abrir ou encerrar a votação',
-    deleteCandidate: 'apagar esta candidatura',
+    deleteCandidate: 'apagar esta candidatura e eventuais votos associados',
     deleteVoter: 'apagar este eleitor e os votos associados',
     changePin: 'alterar o PIN principal'
   };
