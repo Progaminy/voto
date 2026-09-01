@@ -1,9 +1,11 @@
 // Terminologia pública/administrativa dos membros.
 // O banco mantém internamente `delegation` e `zone` por compatibilidade.
 // Na interface usamos sempre Coordenação e Bairro.
-// Não usa MutationObserver.
+// O observador abaixo é restrito apenas ao corpo da tabela de membros.
 
 const COORD_ACCESS_KEY = 'axinene_admin_access_level';
+let terminologyObserver = null;
+let terminologyObserverTarget = null;
 
 function setLabelText(inputId, text) {
   const input = document.getElementById(inputId);
@@ -66,9 +68,10 @@ function applyCoordinationTerminology() {
   if (header?.children?.[4]) header.children[4].textContent = 'Bairro';
 
   document.querySelectorAll('.member-group-row td, .member-zone-row td').forEach(cell => {
-    cell.textContent = replaceMemberTerminology(cell.textContent)
+    const corrected = replaceMemberTerminology(cell.textContent)
       .replace(/^Coordenação:\s*/i, 'Coordenação: ')
       .replace(/^Bairro:\s*/i, 'Bairro: ');
+    if (cell.textContent !== corrected) cell.textContent = corrected;
   });
 
   document.querySelectorAll('#voterTableBody tr:not(.member-group-row):not(.member-zone-row)').forEach(row => {
@@ -76,16 +79,30 @@ function applyCoordinationTerminology() {
   });
 
   const count = document.getElementById('voterCountLabel');
-  if (count) count.textContent = replaceMemberTerminology(count.textContent);
+  if (count) {
+    const corrected = replaceMemberTerminology(count.textContent);
+    if (count.textContent !== corrected) count.textContent = corrected;
+  }
 
   document.querySelectorAll('#memberDelegationFilter option, #memberZoneFilter option').forEach(option => {
-    option.textContent = replaceMemberTerminology(option.textContent);
+    const corrected = replaceMemberTerminology(option.textContent);
+    if (option.textContent !== corrected) option.textContent = corrected;
   });
 }
 
+function bindTerminologyObserver() {
+  const body = document.getElementById('voterTableBody');
+  if (!body || body === terminologyObserverTarget) return;
+  terminologyObserver?.disconnect();
+  terminologyObserverTarget = body;
+  terminologyObserver = new MutationObserver(() => applyCoordinationTerminology());
+  terminologyObserver.observe(body, { childList: true, subtree: true });
+}
+
 function scheduleCoordinationTerminology() {
-  setTimeout(applyCoordinationTerminology, 0);
-  setTimeout(applyCoordinationTerminology, 180);
+  setTimeout(() => { bindTerminologyObserver(); applyCoordinationTerminology(); }, 0);
+  setTimeout(() => { bindTerminologyObserver(); applyCoordinationTerminology(); }, 180);
+  setTimeout(() => { bindTerminologyObserver(); applyCoordinationTerminology(); }, 700);
 }
 
 function printCoordinationList() {
@@ -146,4 +163,3 @@ document.addEventListener('change', event => {
 window.addEventListener('hashchange', scheduleCoordinationTerminology);
 
 scheduleCoordinationTerminology();
-setTimeout(applyCoordinationTerminology, 700);
