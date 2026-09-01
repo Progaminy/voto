@@ -11,7 +11,7 @@ function mlToast(message,type='info',timeout=4200){const r=document.getElementBy
 async function mlApi(action,payload={}){
   const token=sessionStorage.getItem(MEMBER_LOCATIONS_SESSION_KEY)||'';
   if(!token) throw new Error('Sessão administrativa não encontrada.');
-  const res=await fetch(MEMBER_LOCATIONS_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:MEMBER_LOCATIONS_KEY,'x-client-info':'axinene-member-locations/1.0'},cache:'no-store',body:JSON.stringify({action,token,...payload})});
+  const res=await fetch(MEMBER_LOCATIONS_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:MEMBER_LOCATIONS_KEY,'x-client-info':'axinene-member-locations/1.1'},cache:'no-store',body:JSON.stringify({action,token,...payload})});
   const data=await res.json().catch(()=>({}));
   if(!res.ok||data?.ok===false) throw new Error(data?.message||'Não foi possível gerir Coordenações e Zonas.');
   return data;
@@ -28,10 +28,16 @@ function zoneOptions(coordName,selected=''){
   return '<option value="">Sem zona / não definida</option>'+zones.map(z=>`<option value="${mlEscape(z.name)}" ${mlKey(z.name)===mlKey(selected)?'selected':''}>${mlEscape(z.name)}</option>`).join('');
 }
 function replaceInputWithSelect(id,type){
-  const current=document.getElementById(id);if(!current||current.tagName==='SELECT')return current;
-  const value=current.value||'';const select=document.createElement('select');select.id=id;select.className='member-location-select';
-  if(type==='coordination') select.innerHTML=coordinationOptions(value||'Direção Nacional');
-  else select.innerHTML=zoneOptions(document.getElementById(id.includes('Edit')?'memberEditDelegation':'voterDelegation')?.value||'Direção Nacional',value);
+  const current=document.getElementById(id);if(!current)return null;
+  const previous=current.value||'';
+  if(current.tagName==='SELECT'){
+    if(type==='coordination') current.innerHTML=coordinationOptions(previous||'Direção Nacional');
+    else current.innerHTML=zoneOptions(document.getElementById(id.includes('Edit')?'memberEditDelegation':'voterDelegation')?.value||'Direção Nacional',previous);
+    return current;
+  }
+  const select=document.createElement('select');select.id=id;select.className='member-location-select';
+  if(type==='coordination') select.innerHTML=coordinationOptions(previous||'Direção Nacional');
+  else select.innerHTML=zoneOptions(document.getElementById(id.includes('Edit')?'memberEditDelegation':'voterDelegation')?.value||'Direção Nacional',previous);
   current.replaceWith(select);return select;
 }
 function refreshMemberFormSelects(){
@@ -69,10 +75,9 @@ async function addZone(event){event.preventDefault();const coordId=locationCatal
 document.addEventListener('click',event=>{
   if(event.target.closest?.('[data-admin-view="voters"]'))setTimeout(()=>{ensureMlCard();loadLocations();refreshMemberFormSelects();},120);
   if(event.target.closest?.('.member-edit-btn'))setTimeout(()=>{
-    // A edição antiga já preencheu os valores; normalizamos para as opções cadastradas.
     const coord=document.getElementById('memberEditDelegation'),zone=document.getElementById('memberEditZone');
     if(coord){const match=locationCatalog.find(c=>mlKey(c.name)===mlKey(coord.value));if(match)coord.value=match.name;}
-    if(zone&&coord){zone.innerHTML=zoneOptions(coord.value,zone.value);}
+    if(zone&&coord)zone.innerHTML=zoneOptions(coord.value,zone.value);
   },40);
 });
 ensureMlCard();setTimeout(loadLocations,350);
