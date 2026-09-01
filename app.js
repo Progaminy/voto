@@ -68,8 +68,13 @@ await import('./member-only-verification.js?v=20260901-2400');
 // Consulta pública das candidaturas quando a eleição ainda não está aberta.
 await import('./public-candidate-catalog.js?v=20260901-2400');
 
-// Vagas como categorias navegáveis por abas, com recolher/expandir detalhes.
-await import('./public-position-tabs.js?v=20260901-2500');
+// Vagas como categorias navegáveis por abas. Recolhe apenas a informação da função,
+// mantendo os candidatos sempre visíveis.
+await import('./public-position-tabs.js?v=20260901-2600');
+
+// Textos, rodapé, cores, cartões e símbolo editáveis pelo administrador.
+// Este módulo não usa MutationObserver.
+await import('./page-customization.js?v=20260901-2600');
 
 let adminExtrasLoaded = false;
 async function loadAdminExtras() {
@@ -102,6 +107,9 @@ async function loadMemberManagement() {
   } finally {
     window.MutationObserver = NativeMutationObserver;
   }
+
+  // Apenas renomeia a terminologia visível de Delegação para Coordenação e ajusta a impressão.
+  await import('./member-coordination-labels.js?v=20260901-2600');
   applyAccessLevel();
 }
 
