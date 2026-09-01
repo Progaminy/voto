@@ -1,6 +1,6 @@
 function applyMemberOnlyVerificationUI() {
   const heroText = document.querySelector('.hero-copy > p');
-  if (heroText) {
+  if (heroText && heroText.textContent !== 'Consulte os candidatos e os manifestos. Para votar, confirme primeiro o seu número de membro AX registado na lista autorizada.') {
     heroText.textContent = 'Consulte os candidatos e os manifestos. Para votar, confirme primeiro o seu número de membro AX registado na lista autorizada.';
   }
 
@@ -8,18 +8,19 @@ function applyMemberOnlyVerificationUI() {
   if (heading) {
     const title = heading.querySelector('h2');
     const help = heading.querySelector('p');
-    if (title) title.textContent = 'Confirme o seu número de membro';
-    if (help) help.textContent = 'A votação só pode ser liberada com um número de membro AX válido e autorizado.';
+    if (title && title.textContent !== 'Confirme o seu número de membro') title.textContent = 'Confirme o seu número de membro';
+    if (help && help.textContent !== 'A votação só pode ser liberada com um número de membro AX válido e autorizado.') {
+      help.textContent = 'A votação só pode ser liberada com um número de membro AX válido e autorizado.';
+    }
   }
 
-  const tabs = document.querySelector('.verify-tabs');
-  if (tabs) tabs.remove();
+  document.querySelector('.verify-tabs')?.remove();
 
   const form = document.getElementById('verifyForm');
   const input = document.getElementById('identifierInput');
   if (form && input) {
     const label = form.querySelector('label[for="identifierInput"]');
-    if (label) label.textContent = 'N.º de membro';
+    if (label && label.textContent !== 'N.º de membro') label.textContent = 'N.º de membro';
     input.placeholder = 'Ex.: AX-51';
     input.autocomplete = 'off';
     input.setAttribute('inputmode', 'text');
@@ -28,7 +29,7 @@ function applyMemberOnlyVerificationUI() {
   }
 
   const privacy = document.querySelector('.verify-card .privacy-note p');
-  if (privacy) {
+  if (privacy && privacy.textContent !== 'A lista de membros não é exibida publicamente. O número informado é usado apenas para confirmar o direito de voto.') {
     privacy.textContent = 'A lista de membros não é exibida publicamente. O número informado é usado apenas para confirmar o direito de voto.';
   }
 }
@@ -53,13 +54,16 @@ document.addEventListener('submit', event => {
   if (event.target?.id !== 'verifyForm') return;
   const input = document.getElementById('identifierInput');
   const value = input?.value?.trim() || '';
-  if (memberNumberValid(value)) return;
+  if (memberNumberValid(value)) {
+    input.value = value.toUpperCase();
+    return;
+  }
   event.preventDefault();
   event.stopImmediatePropagation();
   memberOnlyToast('Para votar, informe o seu número de membro no formato AX-51. Nome e telefone não são aceites.');
   input?.focus();
 }, true);
 
-const memberVerificationObserver = new MutationObserver(() => applyMemberOnlyVerificationUI());
-memberVerificationObserver.observe(document.body, { childList: true, subtree: true });
+// A interface é estática; aplicar uma vez evita um ciclo de MutationObserver
+// que poderia manter o navegador ocupado indefinidamente.
 applyMemberOnlyVerificationUI();
