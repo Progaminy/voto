@@ -8,6 +8,9 @@ await import('./admin-sensitive-confirm.js?v=20260826-1805');
 // Gestão de membros: numeração AX, duplicados, delegação/zona, edição e impressão.
 await import('./member-management.js?v=20260901-2200');
 
+// A votação pública só pode ser liberada por número de membro AX.
+await import('./member-only-verification.js?v=20260901-2300');
+
 // Página pública: uma aba por vaga, mantendo apenas um voto por vaga.
 await import('./public-position-tabs.js?v=20260826-1805');
 
