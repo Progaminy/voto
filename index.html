@@ -7,7 +7,7 @@
   <meta name="description" content="Plataforma de votação interna da Comissão Eleitoral AXINENE" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Comissão Eleitoral Interna — AXINENE</title>
-  <link rel="stylesheet" href="styles.css?v=20260826-0001" />
+  <link rel="stylesheet" href="styles.css?v=20260901-2400" />
 </head>
 <body>
   <div id="toastRegion" class="toast-region" aria-live="polite"></div>
@@ -31,7 +31,7 @@
         <div class="hero-copy">
           <span class="eyebrow">Votação interna segura</span>
           <h1>O seu voto. A sua escolha.</h1>
-          <p>Consulte os candidatos e os manifestos. Para votar, confirme primeiro que o seu nome, número de membro ou telefone consta da lista autorizada.</p>
+          <p>Consulte os candidatos e os manifestos. Para votar, confirme primeiro o seu número de membro AX registado na lista autorizada.</p>
           <div class="hero-badges" aria-label="Características da votação">
             <span>1 voto por vaga</span>
             <span>Voto privado</span>
@@ -59,28 +59,22 @@
           <div class="section-heading compact">
             <span class="step">1</span>
             <div>
-              <h2>Confirme a sua identidade</h2>
-              <p>Use apenas um dos dados registados previamente pela comissão.</p>
+              <h2>Confirme o seu número de membro</h2>
+              <p>A votação só pode ser liberada com um número de membro AX válido e autorizado.</p>
             </div>
           </div>
 
-          <div class="verify-tabs" role="tablist" aria-label="Forma de identificação">
-            <button class="verify-tab active" type="button" data-placeholder="Digite o seu nome completo">Nome</button>
-            <button class="verify-tab" type="button" data-placeholder="Digite o número de membro">N.º de membro</button>
-            <button class="verify-tab" type="button" data-placeholder="Ex.: 84 000 0000">Telefone</button>
-          </div>
-
           <form id="verifyForm" class="verify-form">
-            <label for="identifierInput">Dado de verificação</label>
+            <label for="identifierInput">N.º de membro</label>
             <div class="input-action-row">
-              <input id="identifierInput" type="text" autocomplete="off" placeholder="Digite o seu nome completo" required />
+              <input id="identifierInput" type="text" autocomplete="off" placeholder="Ex.: AX-51" pattern="[Aa][Xx]-[0-9]+" title="Use o formato AX-51" required />
               <button id="verifyBtn" class="btn btn-primary" type="submit">Verificar</button>
             </div>
           </form>
 
           <div class="privacy-note">
             <span class="lock-icon">✓</span>
-            <p>A lista de eleitores não é exibida publicamente. Os seus dados são usados apenas para confirmar o direito de voto.</p>
+            <p>A lista de membros não é exibida publicamente. O número informado é usado apenas para confirmar o direito de voto.</p>
           </div>
         </section>
 
@@ -244,7 +238,7 @@
               <p class="form-help">Uma pessoa por linha no formato <strong>Nome; Número; Telefone</strong>. Número e telefone podem ficar vazios.</p>
               <form id="bulkVoterForm" class="stack-form">
                 <label>Lista de eleitores
-                  <textarea id="bulkVoters" rows="10" placeholder="Ana Manuel; M001; 840000001&#10;João Alberto; M002; 840000002"></textarea>
+                  <textarea id="bulkVoters" rows="10" placeholder="Ana Manuel; AX-79; 840000001&#10;João Alberto; AX-80; 840000002"></textarea>
                 </label>
                 <button class="btn btn-secondary" type="submit">Importar lista</button>
               </form>
@@ -327,7 +321,6 @@
     </div>
   </dialog>
 
-  <script type="module" src="app.js?v=20260826-0100"></script>
-  <script type="module" src="branding-enhancements.js?v=20260826-0100"></script>
+  <script type="module" src="app.js?v=20260901-2400"></script>
 </body>
 </html>
