@@ -13,6 +13,7 @@ accessPolicyStyles.textContent = `
   body.admin-readonly #adminAccessCodesCard,
   body.admin-readonly .member-edit-btn,
   body.admin-readonly .member-delete-btn,
+  body.admin-readonly .member-view-code-btn,
   body.admin-readonly .delete-candidate,
   body.admin-readonly .delete-voter,
   body.admin-readonly .position-edit-btn { display:none !important; }
@@ -20,7 +21,7 @@ accessPolicyStyles.textContent = `
   @media print {
     body.admin-readonly #adminApp { display:none !important; }
     body.admin-readonly::after {
-      content:'Impressão não autorizada para acesso de visualização.';
+      content:'Impressão não autorizada para este acesso.';
       display:block;
       padding:40px;
       font:700 18px/1.4 Arial,sans-serif;
@@ -49,7 +50,7 @@ function applyAccessLevel(level = sessionStorage.getItem(ADMIN_ACCESS_KEY) || ''
   document.querySelector('[data-admin-view="settings"]')?.classList.toggle('readonly-hidden', readonly);
   document.getElementById('adminViewSettings')?.classList.toggle('readonly-hidden', readonly);
   document.getElementById('toggleElectionBtn')?.classList.toggle('readonly-hidden', readonly);
-  document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn, .member-edit-btn, .member-delete-btn, #printMembersBtn, #printResultsBtn, #adminAccessCodesCard').forEach(el => el.classList.toggle('readonly-hidden', readonly));
+  document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn, .member-edit-btn, .member-delete-btn, .member-view-code-btn, #printMembersBtn, #printResultsBtn, #adminAccessCodesCard').forEach(el => el.classList.toggle('readonly-hidden', readonly));
 }
 
 window.fetch = async (input, init = {}) => {
@@ -84,21 +85,10 @@ window.fetch = async (input, init = {}) => {
   return response;
 };
 
-// Núcleo da aplicação. Sem MutationObserver global: a página deve permanecer responsiva.
 await import('./app-core.js?v=20260901-2400');
-
-// Regra pública: só número de membro AX pode liberar a votação.
 await import('./member-only-verification.js?v=20260901-2400');
-
-// Consulta pública das candidaturas quando a eleição ainda não está aberta.
 await import('./public-candidate-catalog.js?v=20260901-2400');
-
-// Vagas como categorias navegáveis por abas. Recolhe apenas a informação da função,
-// mantendo os candidatos sempre visíveis.
 await import('./public-position-tabs.js?v=20260901-2600');
-
-// Textos, rodapé, cores, cartões e símbolo editáveis pelo administrador.
-// Este módulo não usa MutationObserver.
 await import('./page-customization.js?v=20260901-2600');
 await import('./page-card-theme.js?v=20260901-2600');
 
@@ -109,7 +99,7 @@ async function loadAdminExtras() {
   await import('./admin-position-edit-core.js?v=20260901-2400');
   await import('./admin-sensitive-confirm.js?v=20260901-2700');
   await import('./print-report-table.js?v=20260901-2400');
-  await import('./admin-access-codes.js?v=20260901-2700');
+  await import('./admin-access-codes.js?v=20260901-2900');
   applyAccessLevel();
 }
 
@@ -118,8 +108,6 @@ async function loadMemberManagement() {
   if (memberManagementLoaded || location.hash !== '#admin') return;
   memberManagementLoaded = true;
 
-  // A versão antiga deste módulo instalava um observer no body. Para estabilidade,
-  // impedimos apenas esse observer durante a inicialização; os eventos normais continuam ativos.
   const NativeMutationObserver = window.MutationObserver;
   class StableMutationObserver extends NativeMutationObserver {
     observe(target, options = {}) {
@@ -130,12 +118,11 @@ async function loadMemberManagement() {
 
   window.MutationObserver = StableMutationObserver;
   try {
-    await import('./member-management.js?v=20260901-2400');
+    await import('./member-management.js?v=20260901-2900');
   } finally {
     window.MutationObserver = NativeMutationObserver;
   }
 
-  // Apenas renomeia a terminologia visível de Delegação para Coordenação e ajusta a impressão.
   await import('./member-coordination-labels.js?v=20260901-2600');
   applyAccessLevel();
 }
