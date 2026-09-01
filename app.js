@@ -25,6 +25,8 @@ accessPolicyStyles.textContent = `
   body.admin-readonly #memberLocationCard,
   body.admin-readonly #announceResultsBtn,
   body.admin-readonly #resultRuleCard,
+  body.admin-readonly #resultPodiumCard,
+  body.admin-readonly #commissionCard,
   body.admin-readonly .member-edit-btn,
   body.admin-readonly .member-delete-btn,
   body.admin-readonly .member-view-code-btn,
@@ -61,7 +63,7 @@ function applyAccessLevel(level=currentAccessLevel()){
   document.getElementById('adminViewVoters')?.classList.toggle('readonly-hidden',readonly);
   document.querySelector('#adminViewResults .participation-card')?.classList.toggle('readonly-hidden',readonly);
   document.getElementById('toggleElectionBtn')?.classList.toggle('readonly-hidden',readonly);
-  document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn, .member-edit-btn, .member-delete-btn, .member-view-code-btn, [data-member-view-code], #printMembersBtn, #printResultsBtn, #adminAccessCodesCard, #voterCodeCard, #memberLocationCard, #announceResultsBtn, #resultRuleCard').forEach(el=>el.classList.toggle('readonly-hidden',readonly));
+  document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn, .member-edit-btn, .member-delete-btn, .member-view-code-btn, [data-member-view-code], #printMembersBtn, #printResultsBtn, #adminAccessCodesCard, #voterCodeCard, #memberLocationCard, #announceResultsBtn, #resultRuleCard, #resultPodiumCard, #commissionCard').forEach(el=>el.classList.toggle('readonly-hidden',readonly));
 }
 window.axineneSetAdminAccessLevel=level=>{if(level==='readonly'||level==='full')sessionStorage.setItem(ADMIN_ACCESS_KEY,level);else sessionStorage.removeItem(ADMIN_ACCESS_KEY);applyAccessLevel(level||'');};
 const READONLY_VOTE_ADMIN_ACTIONS=new Set(['login','logout','dashboard']);
@@ -85,13 +87,13 @@ window.fetch=async(input,init={})=>{
     if((isRestCall||isStorageCall)&&!['GET','HEAD'].includes(method)){showReadonlyDenied();return accessDeniedResponse();}
   }
   let requestInit=init;
-  if(isAdminCall){const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));headers.set('apikey',SUPABASE_PUBLIC_KEY);headers.set('x-client-info','axinene-voto/stable-20260902-member-privacy');requestInit={...init,headers};}
+  if(isAdminCall){const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));headers.set('apikey',SUPABASE_PUBLIC_KEY);headers.set('x-client-info','axinene-voto/stable-20260902-results-history');requestInit={...init,headers};}
   const response=await originalFetch(input,requestInit);
   if(isAdminCall){try{const payload=await response.clone().json();if(payload?.access_level==='readonly'||payload?.access_level==='full'){sessionStorage.setItem(ADMIN_ACCESS_KEY,payload.access_level);applyAccessLevel(payload.access_level);if(payload.access_level==='full')setTimeout(()=>loadAdminExtras(),0);}if((action==='logout'&&response.ok)||(response.status===401&&action!=='login')){sessionStorage.removeItem(ADMIN_ACCESS_KEY);applyAccessLevel('');}}catch{}}
   return response;
 };
 document.addEventListener('submit',event=>{if(!isReadonlyAccess()||!event.target.closest?.('#adminApp'))return;if(event.target.id==='adminLoginForm')return;event.preventDefault();event.stopImmediatePropagation();showReadonlyDenied();},true);
-document.addEventListener('click',event=>{if(!isReadonlyAccess()||!event.target.closest?.('#adminApp'))return;const mutation=event.target.closest?.('#toggleElectionBtn, #announceResultsBtn, #saveFiscalRuleBtn, #generateViewCodeBtn, #generateAllVoterCodesBtn, #copyAllVoterCodesBtn, #printMembersBtn, #printResultsBtn, .member-edit-btn, .member-delete-btn, .member-view-code-btn, [data-member-view-code], .delete-candidate, .delete-voter, .position-edit-btn, [data-access-toggle], [data-access-delete], [data-access-copy], [data-vc-copy], [data-vc-generate], [data-vc-regenerate], [data-vc-toggle]');if(!mutation)return;event.preventDefault();event.stopImmediatePropagation();showReadonlyDenied();},true);
+document.addEventListener('click',event=>{if(!isReadonlyAccess()||!event.target.closest?.('#adminApp'))return;const mutation=event.target.closest?.('#toggleElectionBtn, #announceResultsBtn, #saveFiscalRuleBtn, #savePodiumBtn, #generateViewCodeBtn, #generateAllVoterCodesBtn, #copyAllVoterCodesBtn, #printMembersBtn, #printResultsBtn, .member-edit-btn, .member-delete-btn, .member-view-code-btn, [data-member-view-code], [data-commission-delete], .delete-candidate, .delete-voter, .position-edit-btn, [data-access-toggle], [data-access-delete], [data-access-copy], [data-vc-copy], [data-vc-generate], [data-vc-regenerate], [data-vc-toggle]');if(!mutation)return;event.preventDefault();event.stopImmediatePropagation();showReadonlyDenied();},true);
 window.addEventListener('beforeprint',()=>{if(location.hash==='#admin')document.body.classList.add('admin-direct-print-blocked');});
 window.addEventListener('afterprint',()=>document.body.classList.remove('admin-direct-print-blocked'));
 
@@ -99,13 +101,14 @@ await import('./app-core.js?v=20260901-2400');
 await import('./member-only-verification.js?v=20260901-2400');
 await import('./public-candidate-catalog.js?v=20260901-2400');
 await import('./public-position-tabs.js?v=20260901-2600');
+await import('./public-position-default-collapse.js?v=20260902-0300');
 await import('./page-customization.js?v=20260901-2600');
 await import('./page-card-theme.js?v=20260901-2600');
-await import('./public-results.js?v=20260902-0100');
-await import('./public-results-print.js?v=20260901-3100');
+await import('./public-results.js?v=20260902-0300');
+await import('./public-results-print.js?v=20260902-0300');
 
 let adminExtrasLoaded=false;
-async function loadAdminExtras(){if(adminExtrasLoaded||location.hash!=='#admin'||currentAccessLevel()!=='full')return;adminExtrasLoaded=true;await import('./admin-position-edit-core.js?v=20260901-2400');await import('./admin-sensitive-confirm.js?v=20260901-2700');await import('./admin-access-codes.js?v=20260901-2900');await import('./admin-access-code-copy.js?v=20260901-3200');await import('./admin-result-publication.js?v=20260902-0100');await import('./admin-print-results.js?v=20260901-3100');applyAccessLevel();}
+async function loadAdminExtras(){if(adminExtrasLoaded||location.hash!=='#admin'||currentAccessLevel()!=='full')return;adminExtrasLoaded=true;await import('./admin-position-edit-core.js?v=20260901-2400');await import('./admin-sensitive-confirm.js?v=20260901-2700');await import('./admin-access-codes.js?v=20260901-2900');await import('./admin-access-code-copy.js?v=20260901-3200');await import('./admin-result-publication.js?v=20260902-0300');await import('./admin-print-results.js?v=20260902-0300');applyAccessLevel();}
 let memberManagementLoaded=false;
 async function loadMemberManagement(){
   if(memberManagementLoaded||location.hash!=='#admin'||currentAccessLevel()!=='full')return;
