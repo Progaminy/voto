@@ -75,6 +75,7 @@ await import('./public-position-tabs.js?v=20260901-2600');
 // Textos, rodapé, cores, cartões e símbolo editáveis pelo administrador.
 // Este módulo não usa MutationObserver.
 await import('./page-customization.js?v=20260901-2600');
+await import('./page-card-theme.js?v=20260901-2600');
 
 let adminExtrasLoaded = false;
 async function loadAdminExtras() {
