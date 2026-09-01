@@ -70,7 +70,6 @@ function printAdminResults() {
 
   const election = document.getElementById('adminElectionSelect')?.selectedOptions?.[0]?.textContent?.trim() || 'Comissão Eleitoral Interna — AXINENE';
   const voters = document.getElementById('statVoters')?.textContent?.trim() || '0';
-  const participants = document.getElementById('statStarted')?.textContent?.trim() || '0';
   const participation = document.getElementById('statPercent')?.textContent?.trim() || '0%';
   const totalVotes = document.getElementById('statVotes')?.textContent?.trim() || '0';
   const printedAt = new Intl.DateTimeFormat('pt-MZ', { dateStyle: 'long', timeStyle: 'short' }).format(new Date());
@@ -91,9 +90,9 @@ function printAdminResults() {
   const popup = window.open('', '_blank', 'width=1000,height=760');
   if (!popup) return adminPrintToast('O navegador bloqueou a janela de impressão.', 'error');
   popup.document.write(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>Resultados — ${printEscape(election)}</title><style>
-    @page{size:A4 portrait;margin:14mm}*{box-sizing:border-box}body{font:12px/1.4 Arial,sans-serif;color:#111;margin:0}h1{font-size:22px;margin:0 0 4px}p{margin:3px 0}.meta{color:#444;margin-bottom:16px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:15px 0 20px}.summary div{border:1px solid #aaa;padding:8px}.summary small{display:block;color:#555}.summary strong{font-size:15px}.position{break-inside:avoid;margin:0 0 20px}.position h2{font-size:16px;margin:0 0 7px;border-bottom:2px solid #222;padding-bottom:5px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:7px;text-align:left}th{background:#eee}td:nth-child(1),td:nth-child(3),td:nth-child(4){text-align:center}tfoot{font-weight:bold}.footer{margin-top:18px;border-top:1px solid #aaa;padding-top:8px;font-size:10px;color:#555}</style></head><body>
+    @page{size:A4 portrait;margin:14mm}*{box-sizing:border-box}body{font:12px/1.4 Arial,sans-serif;color:#111;margin:0}h1{font-size:22px;margin:0 0 4px}p{margin:3px 0}.meta{color:#444;margin-bottom:16px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:15px 0 20px}.summary div{border:1px solid #aaa;padding:8px}.summary small{display:block;color:#555}.summary strong{font-size:15px}.position{break-inside:avoid;margin:0 0 20px}.position h2{font-size:16px;margin:0 0 7px;border-bottom:2px solid #222;padding-bottom:5px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:7px;text-align:left}th{background:#eee}td:nth-child(1),td:nth-child(3),td:nth-child(4){text-align:center}tfoot{font-weight:bold}.footer{margin-top:18px;border-top:1px solid #aaa;padding-top:8px;font-size:10px;color:#555}</style></head><body>
     <h1>Resultados da eleição</h1><p><strong>${printEscape(election)}</strong></p><p class="meta">Impresso em ${printEscape(printedAt)}</p>
-    <div class="summary"><div><small>Eleitores autorizados</small><strong>${printEscape(voters)}</strong></div><div><small>Participantes</small><strong>${printEscape(participants)}</strong></div><div><small>Participação</small><strong>${printEscape(participation)}</strong></div><div><small>Votos registados</small><strong>${printEscape(totalVotes)}</strong></div></div>
+    <div class="summary"><div><small>Eleitores autorizados</small><strong>${printEscape(voters)}</strong></div><div><small>Participação</small><strong>${printEscape(participation)}</strong></div><div><small>Votos registados</small><strong>${printEscape(totalVotes)}</strong></div></div>
     ${resultHtml}<div class="footer">Comissão Eleitoral Interna — AXINENE</div><script>window.onload=()=>window.print();<\/script></body></html>`);
   popup.document.close();
 }
