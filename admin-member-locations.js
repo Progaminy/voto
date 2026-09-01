@@ -11,9 +11,9 @@ function mlToast(message,type='info',timeout=4200){const r=document.getElementBy
 async function mlApi(action,payload={}){
   const token=sessionStorage.getItem(MEMBER_LOCATIONS_SESSION_KEY)||'';
   if(!token) throw new Error('Sessão administrativa não encontrada.');
-  const res=await fetch(MEMBER_LOCATIONS_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:MEMBER_LOCATIONS_KEY,'x-client-info':'axinene-member-locations/1.1'},cache:'no-store',body:JSON.stringify({action,token,...payload})});
+  const res=await fetch(MEMBER_LOCATIONS_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:MEMBER_LOCATIONS_KEY,'x-client-info':'axinene-member-locations/1.2'},cache:'no-store',body:JSON.stringify({action,token,...payload})});
   const data=await res.json().catch(()=>({}));
-  if(!res.ok||data?.ok===false) throw new Error(data?.message||'Não foi possível gerir Coordenações e Zonas.');
+  if(!res.ok||data?.ok===false) throw new Error(data?.message||'Não foi possível gerir Coordenações e Bairros.');
   return data;
 }
 function installMlStyles(){if(document.getElementById('memberLocationStyles'))return;const s=document.createElement('style');s.id='memberLocationStyles';s.textContent=`
@@ -22,62 +22,67 @@ function installMlStyles(){if(document.getElementById('memberLocationStyles'))re
 function coordinationOptions(selected=''){
   return locationCatalog.map(c=>`<option value="${mlEscape(c.name)}" ${mlKey(c.name)===mlKey(selected)?'selected':''}>${mlEscape(c.name)}</option>`).join('');
 }
-function zoneOptions(coordName,selected=''){
+function neighborhoodOptions(coordName,selected=''){
   const coord=locationCatalog.find(c=>mlKey(c.name)===mlKey(coordName));
-  const zones=coord?.zones||[];
-  return '<option value="">Sem zona / não definida</option>'+zones.map(z=>`<option value="${mlEscape(z.name)}" ${mlKey(z.name)===mlKey(selected)?'selected':''}>${mlEscape(z.name)}</option>`).join('');
+  const neighborhoods=coord?.zones||[];
+  return '<option value="">Sem bairro / não definido</option>'+neighborhoods.map(z=>`<option value="${mlEscape(z.name)}" ${mlKey(z.name)===mlKey(selected)?'selected':''}>${mlEscape(z.name)}</option>`).join('');
 }
 function replaceInputWithSelect(id,type){
   const current=document.getElementById(id);if(!current)return null;
   const previous=current.value||'';
   if(current.tagName==='SELECT'){
     if(type==='coordination') current.innerHTML=coordinationOptions(previous||'Direção Nacional');
-    else current.innerHTML=zoneOptions(document.getElementById(id.includes('Edit')?'memberEditDelegation':'voterDelegation')?.value||'Direção Nacional',previous);
+    else current.innerHTML=neighborhoodOptions(document.getElementById(id.includes('Edit')?'memberEditDelegation':'voterDelegation')?.value||'Direção Nacional',previous);
     return current;
   }
   const select=document.createElement('select');select.id=id;select.className='member-location-select';
   if(type==='coordination') select.innerHTML=coordinationOptions(previous||'Direção Nacional');
-  else select.innerHTML=zoneOptions(document.getElementById(id.includes('Edit')?'memberEditDelegation':'voterDelegation')?.value||'Direção Nacional',previous);
+  else select.innerHTML=neighborhoodOptions(document.getElementById(id.includes('Edit')?'memberEditDelegation':'voterDelegation')?.value||'Direção Nacional',previous);
   current.replaceWith(select);return select;
 }
+function setMemberLocationLabel(id,text){const el=document.getElementById(id);const label=el?.closest('label');if(label&&label.childNodes[0])label.childNodes[0].textContent=`${text} `;}
 function refreshMemberFormSelects(){
   if(!mlAbsolute())return;
   const addCoord=replaceInputWithSelect('voterDelegation','coordination');
-  const addZone=replaceInputWithSelect('voterZone','zone');
+  const addNeighborhood=replaceInputWithSelect('voterZone','neighborhood');
   const editCoord=replaceInputWithSelect('memberEditDelegation','coordination');
-  const editZone=replaceInputWithSelect('memberEditZone','zone');
-  const setCoordLabel=(id)=>{const el=document.getElementById(id);const label=el?.closest('label');if(label&&label.childNodes[0])label.childNodes[0].textContent='Coordenação ';};
-  setCoordLabel('voterDelegation');setCoordLabel('memberEditDelegation');
-  if(addCoord&&!addCoord.dataset.locationBound){addCoord.dataset.locationBound='1';addCoord.addEventListener('change',()=>{if(addZone)addZone.innerHTML=zoneOptions(addCoord.value,'');});}
-  if(editCoord&&!editCoord.dataset.locationBound){editCoord.dataset.locationBound='1';editCoord.addEventListener('change',()=>{if(editZone)editZone.innerHTML=zoneOptions(editCoord.value,'');});}
+  const editNeighborhood=replaceInputWithSelect('memberEditZone','neighborhood');
+  setMemberLocationLabel('voterDelegation','Coordenação');
+  setMemberLocationLabel('memberEditDelegation','Coordenação');
+  setMemberLocationLabel('voterZone','Bairro');
+  setMemberLocationLabel('memberEditZone','Bairro');
+  if(addCoord&&!addCoord.dataset.locationBound){addCoord.dataset.locationBound='1';addCoord.addEventListener('change',()=>{if(addNeighborhood)addNeighborhood.innerHTML=neighborhoodOptions(addCoord.value,'');});}
+  if(editCoord&&!editCoord.dataset.locationBound){editCoord.dataset.locationBound='1';editCoord.addEventListener('change',()=>{if(editNeighborhood)editNeighborhood.innerHTML=neighborhoodOptions(editCoord.value,'');});}
 }
 function renderCatalog(){
   refreshMemberFormSelects();
   const root=document.getElementById('memberLocationCatalogList');if(!root)return;
-  root.innerHTML=locationCatalog.map(c=>`<article class="member-location-row ${c.is_special?'member-location-special':''}"><strong>${mlEscape(c.name)}</strong><div class="member-location-zones">${(c.zones||[]).length?(c.zones||[]).map(z=>`<span>${mlEscape(z.name)}</span>`).join(''):'<span>Sem zonas cadastradas</span>'}</div></article>`).join('');
-  const zoneCoord=document.getElementById('newZoneCoordination');if(zoneCoord){const old=zoneCoord.value;zoneCoord.innerHTML=coordinationOptions(old);}
+  root.innerHTML=locationCatalog.map(c=>`<article class="member-location-row ${c.is_special?'member-location-special':''}"><strong>${mlEscape(c.name)}</strong><div class="member-location-zones">${(c.zones||[]).length?(c.zones||[]).map(z=>`<span>${mlEscape(z.name)}</span>`).join(''):'<span>Sem bairros cadastrados</span>'}</div></article>`).join('');
+  const neighborhoodCoord=document.getElementById('newZoneCoordination');if(neighborhoodCoord){const old=neighborhoodCoord.value;neighborhoodCoord.innerHTML=coordinationOptions(old);}
 }
 function ensureMlCard(){
   if(!mlAbsolute())return null;installMlStyles();
   let card=document.getElementById('memberLocationCard');if(card)return card;
   const view=document.getElementById('adminViewVoters');if(!view)return null;
   card=document.createElement('section');card.id='memberLocationCard';card.className='card member-location-card';
-  card.innerHTML=`<div class="member-location-head"><div><h2>Coordenações e Zonas</h2><p>A adição e edição de membros usa apenas estas opções. Somente Administradores Absolutos podem gerir esta lista.</p></div></div><div class="member-location-grid"><div class="member-location-form"><h3>Adicionar Coordenação</h3><form id="addCoordinationForm" class="stack-form"><label>Nome da Coordenação<input id="newCoordinationName" type="text" maxlength="120" placeholder="Ex.: Ilha de Moçambique" required></label><button class="btn btn-secondary" type="submit">Adicionar Coordenação</button></form></div><div class="member-location-form"><h3>Adicionar Zona</h3><form id="addZoneForm" class="stack-form"><label>Coordenação<select id="newZoneCoordination" required></select></label><label>Nome da Zona<input id="newZoneName" type="text" maxlength="120" placeholder="Ex.: Zona Central" required></label><button class="btn btn-secondary" type="submit">Adicionar Zona</button></form></div></div><div id="memberLocationCatalogList" class="member-location-list"></div>`;
+  card.innerHTML=`<div class="member-location-head"><div><h2>Coordenações e Bairros</h2><p>A adição e edição de membros usa apenas estas opções. Somente Administradores Absolutos podem gerir esta lista.</p></div></div><div class="member-location-grid"><div class="member-location-form"><h3>Adicionar Coordenação</h3><form id="addCoordinationForm" class="stack-form"><label>Nome da Coordenação<input id="newCoordinationName" type="text" maxlength="120" placeholder="Ex.: Ilha de Moçambique" required></label><button class="btn btn-secondary" type="submit">Adicionar Coordenação</button></form></div><div class="member-location-form"><h3>Adicionar Bairro</h3><form id="addZoneForm" class="stack-form"><label>Coordenação<select id="newZoneCoordination" required></select></label><label>Nome do Bairro<input id="newZoneName" type="text" maxlength="120" placeholder="Ex.: Bairro Central" required></label><button class="btn btn-secondary" type="submit">Adicionar Bairro</button></form></div></div><div id="memberLocationCatalogList" class="member-location-list"></div>`;
   view.prepend(card);
   document.getElementById('addCoordinationForm')?.addEventListener('submit',addCoordination);
-  document.getElementById('addZoneForm')?.addEventListener('submit',addZone);
+  document.getElementById('addZoneForm')?.addEventListener('submit',addNeighborhood);
   return card;
 }
 async function loadLocations(){if(!mlAbsolute())return;try{ensureMlCard();const data=await mlApi('list');locationCatalog=data.coordinations||[];renderCatalog();}catch(e){mlToast(e.message,'error');}}
 async function addCoordination(event){event.preventDefault();const input=document.getElementById('newCoordinationName');const name=input?.value.trim();if(!name)return;try{const data=await mlApi('addCoordination',{name});locationCatalog=data.coordinations||[];if(input)input.value='';renderCatalog();mlToast(data.message||'Coordenação adicionada.','success');}catch(e){mlToast(e.message,'error');}}
-async function addZone(event){event.preventDefault();const coordId=locationCatalog.find(c=>mlKey(c.name)===mlKey(document.getElementById('newZoneCoordination')?.value||''))?.id||'';const input=document.getElementById('newZoneName');const name=input?.value.trim();if(!coordId||!name)return;try{const data=await mlApi('addZone',{coordination_id:coordId,name});locationCatalog=data.coordinations||[];if(input)input.value='';renderCatalog();mlToast(data.message||'Zona adicionada.','success');}catch(e){mlToast(e.message,'error');}}
+async function addNeighborhood(event){event.preventDefault();const coordId=locationCatalog.find(c=>mlKey(c.name)===mlKey(document.getElementById('newZoneCoordination')?.value||''))?.id||'';const input=document.getElementById('newZoneName');const name=input?.value.trim();if(!coordId||!name)return;try{const data=await mlApi('addZone',{coordination_id:coordId,name});locationCatalog=data.coordinations||[];if(input)input.value='';renderCatalog();mlToast(data.message||'Bairro adicionado.','success');}catch(e){mlToast(e.message,'error');}}
 
 document.addEventListener('click',event=>{
   if(event.target.closest?.('[data-admin-view="voters"]'))setTimeout(()=>{ensureMlCard();loadLocations();refreshMemberFormSelects();},120);
   if(event.target.closest?.('.member-edit-btn'))setTimeout(()=>{
-    const coord=document.getElementById('memberEditDelegation'),zone=document.getElementById('memberEditZone');
+    const coord=document.getElementById('memberEditDelegation'),neighborhood=document.getElementById('memberEditZone');
     if(coord){const match=locationCatalog.find(c=>mlKey(c.name)===mlKey(coord.value));if(match)coord.value=match.name;}
-    if(zone&&coord)zone.innerHTML=zoneOptions(coord.value,zone.value);
+    if(neighborhood&&coord)neighborhood.innerHTML=neighborhoodOptions(coord.value,neighborhood.value);
+    setMemberLocationLabel('memberEditDelegation','Coordenação');
+    setMemberLocationLabel('memberEditZone','Bairro');
   },40);
 });
 ensureMlCard();setTimeout(loadLocations,350);
