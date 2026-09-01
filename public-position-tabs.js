@@ -1,6 +1,6 @@
 // Navegação pública por vagas/categorias.
-// Observa apenas a substituição dos filhos diretos de #positionsList.
-// Não observa atributos nem o body, evitando o ciclo que congelava a página.
+// O observador fica restrito apenas aos filhos diretos de #positionsList.
+// Não observa atributos nem o body, evitando ciclos de renderização.
 
 const root = document.getElementById('positionsList');
 const ballotSection = document.getElementById('ballotSection');
@@ -74,6 +74,10 @@ if (root) {
       font-weight: 750;
     }
     .position-block.vacancy-tab-panel[hidden] { display: none !important; }
+    .vacancy-position-description {
+      white-space: pre-line;
+      line-height: 1.62;
+    }
     .vacancy-detail-toolbar {
       display: flex;
       align-items: center;
@@ -100,19 +104,17 @@ if (root) {
       font-weight: 850;
       cursor: pointer;
     }
-    .position-block.vacancy-collapsed .candidate-grid { display: none !important; }
-    .position-block.vacancy-collapsed .position-description,
-    .position-block.vacancy-collapsed .position-head p { display: none !important; }
-    .vacancy-collapsed-note {
+    .position-block.vacancy-info-collapsed .vacancy-position-description { display: none !important; }
+    .vacancy-info-collapsed-note {
       display: none;
-      margin: 12px 0 0;
-      padding: 11px 13px;
+      margin: 10px 0 0;
+      padding: 10px 12px;
       border-radius: 12px;
       background: var(--surface-soft, #f4f8fc);
       color: var(--muted);
       font-size: 12px;
     }
-    .position-block.vacancy-collapsed .vacancy-collapsed-note { display: block; }
+    .position-block.vacancy-info-collapsed .vacancy-info-collapsed-note { display: block; }
 
     @media (max-width: 680px) {
       .vacancy-navigation {
@@ -157,7 +159,7 @@ if (root) {
       <div class="vacancy-navigation-head">
         <div>
           <strong>Vagas por categoria</strong>
-          <span>Escolha uma aba para consultar os candidatos dessa vaga.</span>
+          <span>Escolha uma aba para consultar a função e os respetivos candidatos.</span>
         </div>
       </div>
       <div id="vacancyTabs" class="vacancy-tabs" role="tablist" aria-label="Vagas disponíveis"></div>`;
@@ -165,31 +167,34 @@ if (root) {
     return nav;
   }
 
-  function addDetailControl(block, title) {
+  function addInformationControl(block, title) {
     const head = block.querySelector('.position-head');
     if (!head || head.querySelector('.vacancy-detail-toolbar')) return;
+
+    const description = head.querySelector('div > p');
+    if (description) description.classList.add('vacancy-position-description');
 
     const candidateCount = block.querySelectorAll('.candidate-card').length;
     const toolbar = document.createElement('div');
     toolbar.className = 'vacancy-detail-toolbar';
     toolbar.innerHTML = `
       <span class="vacancy-detail-count">${candidateCount} candidato${candidateCount === 1 ? '' : 's'} nesta categoria</span>
-      <button class="vacancy-detail-toggle" type="button" aria-expanded="true">Recolher detalhes</button>`;
+      <button class="vacancy-detail-toggle" type="button" aria-expanded="true">Recolher informação da vaga</button>`;
     head.appendChild(toolbar);
 
     const collapsedNote = document.createElement('div');
-    collapsedNote.className = 'vacancy-collapsed-note';
-    collapsedNote.textContent = `Detalhes de ${title} recolhidos. Clique em “Expandir detalhes” para voltar a consultar os candidatos.`;
+    collapsedNote.className = 'vacancy-info-collapsed-note';
+    collapsedNote.textContent = `Informação sobre ${title} recolhida. As candidaturas continuam visíveis abaixo.`;
     head.insertAdjacentElement('afterend', collapsedNote);
 
     toolbar.querySelector('.vacancy-detail-toggle')?.addEventListener('click', event => {
-      const collapsed = block.classList.toggle('vacancy-collapsed');
-      event.currentTarget.textContent = collapsed ? 'Expandir detalhes' : 'Recolher detalhes';
+      const collapsed = block.classList.toggle('vacancy-info-collapsed');
+      event.currentTarget.textContent = collapsed ? 'Expandir informação da vaga' : 'Recolher informação da vaga';
       event.currentTarget.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     });
   }
 
-  function activate(title, options = {}) {
+  function activate(title) {
     const blocks = getBlocks();
     if (!blocks.length) return;
 
@@ -198,8 +203,7 @@ if (root) {
     activeTitle = next;
 
     blocks.forEach((block, index) => {
-      const blockTitle = titles[index];
-      const selected = blockTitle === next;
+      const selected = titles[index] === next;
       block.classList.add('vacancy-tab-panel');
       block.hidden = !selected;
       block.setAttribute('role', 'tabpanel');
@@ -211,11 +215,6 @@ if (root) {
       button.setAttribute('aria-selected', selected ? 'true' : 'false');
       button.tabIndex = selected ? 0 : -1;
     });
-
-    if (options.focusPanel) {
-      const activeBlock = blocks.find((block, index) => titles[index] === next);
-      activeBlock?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
   }
 
   function rebuildTabs(blocks, titles) {
@@ -235,7 +234,7 @@ if (root) {
       button.innerHTML = `<span></span>${state ? '<small class="vacancy-tab-state"></small>' : ''}`;
       button.querySelector('span').textContent = title;
       if (state) button.querySelector('small').textContent = state;
-      button.addEventListener('click', () => activate(title, { focusPanel: false }));
+      button.addEventListener('click', () => activate(title));
       button.addEventListener('keydown', event => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
@@ -251,7 +250,7 @@ if (root) {
         next.focus();
       });
       tabs.appendChild(button);
-      addDetailControl(block, title);
+      addInformationControl(block, title);
     });
   }
 
@@ -271,7 +270,7 @@ if (root) {
       rebuildTabs(blocks, titles);
       lastSignature = signature;
     } else {
-      blocks.forEach((block, index) => addDetailControl(block, titles[index]));
+      blocks.forEach((block, index) => addInformationControl(block, titles[index]));
     }
     activate(activeTitle || titles[0]);
   }
@@ -282,7 +281,8 @@ if (root) {
     requestAnimationFrame(sync);
   }
 
-  // Somente filhos diretos: renderBallot() e renderCatalog() substituem esses nós.
+  // O núcleo substitui os filhos diretos quando muda o estado da votação.
+  // Observar somente childList deste elemento não cria ciclos de classes/atributos.
   const observer = new MutationObserver(scheduleSync);
   observer.observe(root, { childList: true });
 
