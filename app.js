@@ -11,6 +11,8 @@ accessPolicyStyles.textContent = `
   body.admin-readonly #printMembersBtn,
   body.admin-readonly #printResultsBtn,
   body.admin-readonly #adminAccessCodesCard,
+  body.admin-readonly #announceResultsBtn,
+  body.admin-readonly #resultRuleCard,
   body.admin-readonly .member-edit-btn,
   body.admin-readonly .member-delete-btn,
   body.admin-readonly .member-view-code-btn,
@@ -50,7 +52,7 @@ function applyAccessLevel(level = sessionStorage.getItem(ADMIN_ACCESS_KEY) || ''
   document.querySelector('[data-admin-view="settings"]')?.classList.toggle('readonly-hidden', readonly);
   document.getElementById('adminViewSettings')?.classList.toggle('readonly-hidden', readonly);
   document.getElementById('toggleElectionBtn')?.classList.toggle('readonly-hidden', readonly);
-  document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn, .member-edit-btn, .member-delete-btn, .member-view-code-btn, #printMembersBtn, #printResultsBtn, #adminAccessCodesCard').forEach(el => el.classList.toggle('readonly-hidden', readonly));
+  document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn, .member-edit-btn, .member-delete-btn, .member-view-code-btn, #printMembersBtn, #printResultsBtn, #adminAccessCodesCard, #announceResultsBtn, #resultRuleCard').forEach(el => el.classList.toggle('readonly-hidden', readonly));
 }
 
 window.fetch = async (input, init = {}) => {
@@ -91,6 +93,7 @@ await import('./public-candidate-catalog.js?v=20260901-2400');
 await import('./public-position-tabs.js?v=20260901-2600');
 await import('./page-customization.js?v=20260901-2600');
 await import('./page-card-theme.js?v=20260901-2600');
+await import('./public-results.js?v=20260901-3000');
 
 let adminExtrasLoaded = false;
 async function loadAdminExtras() {
@@ -100,6 +103,7 @@ async function loadAdminExtras() {
   await import('./admin-sensitive-confirm.js?v=20260901-2700');
   await import('./print-report-table.js?v=20260901-2400');
   await import('./admin-access-codes.js?v=20260901-2900');
+  await import('./admin-result-publication.js?v=20260901-3000');
   applyAccessLevel();
 }
 
