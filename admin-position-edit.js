@@ -1,49 +1,9 @@
-// Edição de vagas. O login administrativo é tratado apenas pelo app-core.js.
-// Mantemos um único fluxo de autenticação para evitar dois handlers concorrentes.
-await import('./admin-position-edit-core.js?v=20260826-1805');
+// Compatibilidade para versões antigas do carregador principal.
+// Mantém apenas módulos administrativos sem observers globais.
+await import('./member-only-verification.js?v=20260901-2400');
 
-// Segurança adicional: operações sensíveis exigem confirmação do PIN principal.
-await import('./admin-sensitive-confirm.js?v=20260826-1805');
-
-// A votação pública só pode ser liberada por número de membro AX.
-await import('./member-only-verification.js?v=20260901-2310');
-
-// Gestão de membros: carrega apenas na área administrativa. Durante a importação,
-// neutralizamos somente o observer antigo que vigiava alterações de classe no body
-// e podia entrar em ciclo infinito. Depois restauramos o MutationObserver normal.
-let memberManagementLoaded = false;
-async function loadMemberManagement() {
-  if (memberManagementLoaded || location.hash !== '#admin') return;
-  memberManagementLoaded = true;
-
-  const NativeMutationObserver = window.MutationObserver;
-  class SafeMemberMutationObserver extends NativeMutationObserver {
-    observe(target, options = {}) {
-      const watchesBodyClasses = target === document.body
-        && options?.attributes === true
-        && Array.isArray(options?.attributeFilter)
-        && options.attributeFilter.includes('class');
-      if (watchesBodyClasses) return;
-      return super.observe(target, options);
-    }
-  }
-
-  window.MutationObserver = SafeMemberMutationObserver;
-  try {
-    await import('./member-management.js?v=20260901-2310');
-  } finally {
-    window.MutationObserver = NativeMutationObserver;
-  }
+if (location.hash === '#admin') {
+  await import('./admin-position-edit-core.js?v=20260901-2400');
+  await import('./admin-sensitive-confirm.js?v=20260901-2400');
+  await import('./print-report-table.js?v=20260901-2400');
 }
-
-window.addEventListener('hashchange', () => { loadMemberManagement(); });
-await loadMemberManagement();
-
-// Página pública: uma aba por vaga, mantendo apenas um voto por vaga.
-await import('./public-position-tabs.js?v=20260826-1805');
-
-// Mesmo antes da abertura, visitantes podem consultar vagas, candidatos e manifestos.
-await import('./public-candidate-catalog.js?v=20260826-1805');
-
-// Relatório impresso com tabelas detalhadas.
-await import('./print-report-table.js?v=20260826-1805');
