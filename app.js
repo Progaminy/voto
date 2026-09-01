@@ -68,6 +68,9 @@ await import('./member-only-verification.js?v=20260901-2400');
 // Consulta pública das candidaturas quando a eleição ainda não está aberta.
 await import('./public-candidate-catalog.js?v=20260901-2400');
 
+// Vagas como categorias navegáveis por abas, com recolher/expandir detalhes.
+await import('./public-position-tabs.js?v=20260901-2500');
+
 let adminExtrasLoaded = false;
 async function loadAdminExtras() {
   if (adminExtrasLoaded || location.hash !== '#admin') return;
