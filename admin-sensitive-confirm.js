@@ -31,12 +31,12 @@ window.fetch = async (input, init = {}) => {
     toggleElection: 'abrir ou encerrar a votação',
     deleteCandidate: 'apagar esta candidatura e eventuais votos associados',
     deleteVoter: 'apagar este eleitor e os votos associados',
-    changePin: 'alterar o PIN principal'
+    changePin: 'alterar o seu código de Administrador Absoluto'
   };
-  const entered = window.prompt(`Confirme o PIN principal para ${labels[action] || 'concluir esta operação'}:`);
+  const entered = window.prompt(`Confirme com o seu código de Administrador Absoluto para ${labels[action] || 'concluir esta operação'}:`);
   if (entered === null) return deniedResponse('Operação cancelada.');
   const pin = String(entered).replace(/\D/g, '').slice(0, 6);
-  if (pin.length !== 6) return deniedResponse('O PIN de confirmação deve ter 6 dígitos.');
+  if (pin.length !== 6) return deniedResponse('O código de confirmação deve ter 6 dígitos.');
 
   payload.confirmation_pin = pin;
   return previousFetch(input, { ...init, body: JSON.stringify(payload) });
