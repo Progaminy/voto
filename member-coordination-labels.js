@@ -12,9 +12,18 @@ function setLabelText(inputId, text) {
   if (textNode) textNode.textContent = `${text} `;
 }
 
+function useNationalDirectionWhenEmpty(inputId) {
+  const input = document.getElementById(inputId);
+  if (input && !input.value.trim()) input.value = 'Direção Nacional';
+}
+
 function applyCoordinationTerminology() {
   setLabelText('voterDelegation', 'Coordenação');
   setLabelText('memberEditDelegation', 'Coordenação');
+  useNationalDirectionWhenEmpty('voterDelegation');
+  useNationalDirectionWhenEmpty('voterZone');
+  useNationalDirectionWhenEmpty('memberEditDelegation');
+  useNationalDirectionWhenEmpty('memberEditZone');
 
   const bulkHelp = document.querySelector('#bulkVoterForm')?.closest('.form-card')?.querySelector('.form-help');
   if (bulkHelp) {
@@ -33,7 +42,17 @@ function applyCoordinationTerminology() {
   if (header?.children?.[3]) header.children[3].textContent = 'Coordenação';
 
   document.querySelectorAll('.member-group-row td').forEach(cell => {
-    cell.textContent = cell.textContent.replace(/^Delegação:/, 'Coordenação:');
+    cell.textContent = cell.textContent
+      .replace(/^Delegação:/, 'Coordenação:')
+      .replaceAll('Sem delegação', 'Direção Nacional');
+  });
+  document.querySelectorAll('.member-zone-row td').forEach(cell => {
+    cell.textContent = cell.textContent.replaceAll('Sem zona indicada', 'Direção Nacional');
+  });
+
+  document.querySelectorAll('#voterTableBody tr:not(.member-group-row):not(.member-zone-row)').forEach(row => {
+    if (row.children?.[3]?.textContent.trim() === '—') row.children[3].textContent = 'Direção Nacional';
+    if (row.children?.[4]?.textContent.trim() === '—') row.children[4].textContent = 'Direção Nacional';
   });
 
   const count = document.getElementById('voterCountLabel');
