@@ -107,17 +107,17 @@
       <div class="admin-login-card card">
         <button id="backToPublicBtn" class="back-link" type="button">← Voltar à votação</button>
         <span class="eyebrow">Acesso restrito</span>
-        <h1>Administrador</h1>
-        <p>Introduza o PIN administrativo de 6 dígitos.</p>
+        <h1>Acesso administrativo</h1>
+        <p>Introduza um código de 6 dígitos. O Administrador Absoluto tem controlo total; códigos de visualização permitem apenas consultar.</p>
         <form id="adminLoginForm" class="stack-form">
-          <label>PIN
+          <label>Código
             <input id="adminPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="••••••" required />
           </label>
           <button id="adminLoginBtn" class="btn btn-primary btn-full" type="submit">Entrar</button>
         </form>
         <div class="privacy-note">
           <span class="lock-icon">✓</span>
-          <p>O PIN não fica guardado no navegador. Depois do acesso é criada uma sessão administrativa temporária.</p>
+          <p>O código não fica guardado no navegador. Depois do acesso é criada uma sessão administrativa temporária.</p>
         </div>
       </div>
     </section>
@@ -283,16 +283,16 @@
             </div>
 
             <div class="card form-card settings-card">
-              <h2>Segurança</h2>
-              <p class="form-help">Altere o PIN sempre que necessário. O novo PIN deve ter exatamente 6 dígitos.</p>
+              <h2>Segurança — Administrador Absoluto</h2>
+              <p class="form-help">Cada Administrador Absoluto pode alterar o próprio código. O novo código deve ter exatamente 6 dígitos.</p>
               <form id="changePinForm" class="stack-form">
-                <label>Novo PIN
+                <label>Novo código
                   <input id="newAdminPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="••••••" required />
                 </label>
-                <label>Confirmar novo PIN
+                <label>Confirmar novo código
                   <input id="confirmAdminPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="••••••" required />
                 </label>
-                <button class="btn btn-secondary" type="submit">Alterar PIN</button>
+                <button class="btn btn-secondary" type="submit">Alterar meu código</button>
               </form>
             </div>
           </div>
@@ -321,6 +321,6 @@
     </div>
   </dialog>
 
-  <script type="module" src="app.js?v=20260901-2700"></script>
+  <script type="module" src="app.js?v=20260901-2800"></script>
 </body>
 </html>
