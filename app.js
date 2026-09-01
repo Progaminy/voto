@@ -114,7 +114,7 @@ async function loadMemberManagement(){
   class StableMutationObserver extends NativeMutationObserver{observe(target,options={}){if(target===document.body)return;return super.observe(target,options);}}
   window.MutationObserver=StableMutationObserver;
   try{await import('./member-management.js?v=20260901-2900');}finally{window.MutationObserver=NativeMutationObserver;}
-  await import('./member-coordination-labels.js?v=20260901-2600');
+  await import('./member-coordination-labels.js?v=20260902-0210');
   await import('./admin-member-locations.js?v=20260902-0210');
   applyAccessLevel();
 }
