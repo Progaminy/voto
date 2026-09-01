@@ -3,6 +3,7 @@ const MEMBERS_SUPABASE_KEY = 'sb_publishable_BTEfqQcnOfeZiVXjS1q3DQ_EFWeyMRj';
 const MEMBERS_EDGE_URL = `${MEMBERS_SUPABASE_URL}/functions/v1/vote-members`;
 const MEMBERS_ADMIN_SESSION_KEY = 'axinene_admin_pin_session';
 const MEMBERS_ADMIN_ACCESS_KEY = 'axinene_admin_access_level';
+const NATIONAL_DIRECTION = 'Direção Nacional';
 
 const memberEscape = (value = '') => String(value)
   .replaceAll('&', '&amp;')
@@ -17,6 +18,15 @@ const memberNumberValue = (value = '') => {
 };
 const memberAccess = () => sessionStorage.getItem(MEMBERS_ADMIN_ACCESS_KEY) || '';
 const currentElectionId = () => document.getElementById('adminElectionSelect')?.value || '';
+const isNationalDirection = value => memberTextKey(value) === memberTextKey(NATIONAL_DIRECTION);
+const memberDisplayDelegation = member => String(member?.delegation || NATIONAL_DIRECTION).trim() || NATIONAL_DIRECTION;
+const memberDisplayZone = member => {
+  const delegation = memberDisplayDelegation(member);
+  const zone = String(member?.zone || '').trim();
+  if (!zone) return '';
+  if (isNationalDirection(zone) && !isNationalDirection(delegation)) return '';
+  return zone;
+};
 
 let memberRows = [];
 let memberLastElection = '';
@@ -43,7 +53,7 @@ async function membersApi(action, payload = {}) {
     headers: {
       'Content-Type': 'application/json',
       'apikey': MEMBERS_SUPABASE_KEY,
-      'x-client-info': 'axinene-voto-members/1.0'
+      'x-client-info': 'axinene-voto-members/1.1'
     },
     cache: 'no-store',
     body: JSON.stringify({ action, token, election_id: electionId, ...payload })
@@ -65,9 +75,10 @@ function installMemberStyles() {
     .member-print-btn { white-space:nowrap; }
     .member-group-row td { background:#eef5ff !important; color:#0b4d91; font-weight:850; font-size:12px; letter-spacing:.02em; border-top:2px solid #c9dff7; }
     .member-zone-row td { background:#f6fbf7 !important; color:#176b3a; font-weight:800; font-size:11px; }
-    .member-action-cell { white-space:nowrap; display:flex; gap:6px; align-items:center; }
-    .member-edit-btn, .member-delete-btn { min-height:34px; padding:6px 9px; border-radius:9px; font-size:11px; }
+    .member-action-cell { white-space:nowrap; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+    .member-edit-btn, .member-delete-btn, .member-view-code-btn { min-height:34px; padding:6px 9px; border-radius:9px; font-size:11px; }
     .member-edit-btn { border:1px solid #b9cce3; background:#fff; color:#154f88; font-weight:800; }
+    .member-view-code-btn { border:1px solid #bfe3ca; background:#f3fff7; color:#176b3a; font-weight:800; }
     .member-delete-btn { border:1px solid #efc4c4; background:#fff8f8; color:#a52a2a; font-weight:800; }
     .member-meta { display:block; margin-top:3px; font-size:10px; color:#718096; }
     .member-dialog { width:min(620px, calc(100vw - 24px)); border:0; border-radius:18px; padding:0; box-shadow:0 24px 70px rgba(0,0,0,.22); }
@@ -77,7 +88,6 @@ function installMemberStyles() {
     .member-dialog-head h2 { margin:0; }
     .member-dialog-close { width:36px; height:36px; border-radius:50%; border:1px solid #d8e0ea; background:#fff; font-size:22px; }
     .member-dialog-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
-    .member-readonly-note { margin:10px 0 0; padding:10px 12px; border-radius:10px; background:#fff4cc; color:#714f00; font-size:12px; font-weight:700; }
     @media (max-width: 760px) {
       #voterTableBody td:nth-child(3), #voterTableBody td:nth-child(5), #voterTableHead th:nth-child(3), #voterTableHead th:nth-child(5) { display:none; }
       .member-toolbar { align-items:stretch; }
@@ -189,19 +199,16 @@ function getFilteredMembers() {
   const delegation = document.getElementById('memberDelegationFilter')?.value || '';
   const zone = document.getElementById('memberZoneFilter')?.value || '';
   return memberRows.filter(v => {
-    if (delegation && (v.delegation || '') !== delegation) return false;
-    if (zone && (v.zone || '') !== zone) return false;
+    const displayZone = memberDisplayZone(v);
+    if (delegation && memberDisplayDelegation(v) !== delegation) return false;
+    if (zone && displayZone !== zone) return false;
     if (!needle) return true;
-    return memberTextKey(`${v.full_name} ${v.member_number || ''} ${v.phone || ''} ${v.delegation || ''} ${v.zone || ''}`).includes(needle);
+    return memberTextKey(`${v.full_name} ${v.member_number || ''} ${v.phone || ''} ${memberDisplayDelegation(v)} ${displayZone}`).includes(needle);
   });
 }
 
 function sortedMembers(rows) {
   return [...rows].sort((a, b) => {
-    const d = String(a.delegation || '').localeCompare(String(b.delegation || ''), 'pt', { sensitivity: 'base' });
-    if (d) return d;
-    const z = String(a.zone || '').localeCompare(String(b.zone || ''), 'pt', { sensitivity: 'base' });
-    if (z) return z;
     const n = memberNumberValue(a.member_number) - memberNumberValue(b.member_number);
     if (n) return n;
     return String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt', { sensitivity: 'base' });
@@ -212,7 +219,7 @@ function refreshFilterOptions() {
   const delegationSelect = document.getElementById('memberDelegationFilter');
   if (!delegationSelect) return;
   const current = delegationSelect.value;
-  const values = [...new Set(memberRows.map(v => v.delegation).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
+  const values = [...new Set(memberRows.map(memberDisplayDelegation).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
   delegationSelect.innerHTML = '<option value="">Todas as delegações</option>' + values.map(v => `<option value="${memberEscape(v)}">${memberEscape(v)}</option>`).join('');
   if (values.includes(current)) delegationSelect.value = current;
   refreshZoneOptions();
@@ -223,7 +230,10 @@ function refreshZoneOptions() {
   if (!zoneSelect) return;
   const delegation = document.getElementById('memberDelegationFilter')?.value || '';
   const current = zoneSelect.value;
-  const values = [...new Set(memberRows.filter(v => !delegation || v.delegation === delegation).map(v => v.zone).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
+  const values = [...new Set(memberRows
+    .filter(v => !delegation || memberDisplayDelegation(v) === delegation)
+    .map(memberDisplayZone)
+    .filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
   zoneSelect.innerHTML = '<option value="">Todas as zonas</option>' + values.map(v => `<option value="${memberEscape(v)}">${memberEscape(v)}</option>`).join('');
   if (values.includes(current)) zoneSelect.value = current;
 }
@@ -234,7 +244,7 @@ function renderMembers() {
   if (!body) return;
   const rows = sortedMembers(getFilteredMembers());
   const countLabel = document.getElementById('voterCountLabel');
-  const delegationCount = new Set(memberRows.map(v => v.delegation).filter(Boolean)).size;
+  const delegationCount = new Set(memberRows.map(memberDisplayDelegation).filter(Boolean)).size;
   if (countLabel) countLabel.textContent = `${memberRows.length} membro${memberRows.length === 1 ? '' : 's'} · ${delegationCount} delegaç${delegationCount === 1 ? 'ão' : 'ões'}`;
   if (!rows.length) {
     body.innerHTML = '<tr><td colspan="7">Nenhum membro encontrado.</td></tr>';
@@ -245,26 +255,28 @@ function renderMembers() {
   let lastZone = null;
   const html = [];
   for (const v of rows) {
-    const delegation = v.delegation || 'Sem delegação';
-    const zone = v.zone || 'Sem zona indicada';
+    const delegation = memberDisplayDelegation(v);
+    const zone = memberDisplayZone(v);
     if (delegation !== lastDelegation) {
-      html.push(`<tr class="member-group-row"><td colspan="7">Delegação: ${memberEscape(delegation)}</td></tr>`);
+      const label = isNationalDirection(delegation) ? NATIONAL_DIRECTION : `Delegação: ${delegation}`;
+      html.push(`<tr class="member-group-row"><td colspan="7">${memberEscape(label)}</td></tr>`);
       lastDelegation = delegation;
       lastZone = null;
     }
-    if (zone !== lastZone) {
-      html.push(`<tr class="member-zone-row"><td colspan="7">Zona: ${memberEscape(zone)}</td></tr>`);
+    if (zone && zone !== lastZone && !(isNationalDirection(delegation) && isNationalDirection(zone))) {
+      const zoneLabel = isNationalDirection(zone) ? NATIONAL_DIRECTION : `Zona: ${zone}`;
+      html.push(`<tr class="member-zone-row"><td colspan="7">${memberEscape(zoneLabel)}</td></tr>`);
       lastZone = zone;
     }
     const actions = memberAccess() === 'full'
-      ? `<div class="member-action-cell"><button class="member-edit-btn" type="button" data-member-edit="${v.id}">Editar</button><button class="member-delete-btn" type="button" data-member-delete="${v.id}">Apagar</button></div>`
-      : '<span class="member-meta">Somente leitura</span>';
+      ? `<div class="member-action-cell"><button class="member-edit-btn" type="button" data-member-edit="${v.id}">Editar</button><button class="member-view-code-btn" type="button" data-member-view-code="${v.id}">Gerar código</button><button class="member-delete-btn" type="button" data-member-delete="${v.id}">Apagar</button></div>`
+      : '';
     html.push(`<tr>
       <td><strong>${memberEscape(v.full_name)}</strong></td>
       <td>${memberEscape(v.member_number || '—')}</td>
       <td>${memberEscape(v.phone || '—')}</td>
-      <td>${memberEscape(v.delegation || '—')}</td>
-      <td>${memberEscape(v.zone || '—')}</td>
+      <td>${memberEscape(delegation)}</td>
+      <td>${memberEscape(zone || '—')}</td>
       <td><span class="state-chip ${v.active ? 'done' : ''}">${v.active ? 'Autorizado' : 'Inativo'}</span></td>
       <td>${actions}</td>
     </tr>`);
@@ -296,7 +308,7 @@ async function syncMembers(force = false) {
 }
 
 async function submitSingleMember(form) {
-  if (memberAccess() !== 'full') return memberToast('Este acesso é somente para visualização.', 'error');
+  if (memberAccess() !== 'full') return memberToast('Este acesso não permite alterações.', 'error');
   const button = form.querySelector('button[type="submit"]');
   const old = button?.textContent;
   if (button) { button.disabled = true; button.textContent = 'A adicionar…'; }
@@ -326,7 +338,7 @@ function parseBulkMembers(raw) {
 }
 
 async function submitBulkMembers(form) {
-  if (memberAccess() !== 'full') return memberToast('Este acesso é somente para visualização.', 'error');
+  if (memberAccess() !== 'full') return memberToast('Este acesso não permite alterações.', 'error');
   const rows = parseBulkMembers(document.getElementById('bulkVoters')?.value || '');
   if (!rows.length) return memberToast('Cole pelo menos um membro válido.', 'error');
   const button = form.querySelector('button[type="submit"]');
@@ -345,7 +357,7 @@ async function submitBulkMembers(form) {
 }
 
 function openMemberEdit(id) {
-  if (memberAccess() !== 'full') return memberToast('Este acesso é somente para visualização.', 'error');
+  if (memberAccess() !== 'full') return memberToast('Este acesso não permite alterações.', 'error');
   const v = memberRows.find(row => row.id === id);
   const dialog = document.getElementById('memberEditDialog');
   if (!v || !dialog) return;
@@ -361,7 +373,7 @@ function openMemberEdit(id) {
 
 async function saveMemberEdit(event) {
   event.preventDefault();
-  if (memberAccess() !== 'full') return memberToast('Este acesso é somente para visualização.', 'error');
+  if (memberAccess() !== 'full') return memberToast('Este acesso não permite alterações.', 'error');
   const form = event.currentTarget;
   const button = form.querySelector('button[type="submit"]');
   const old = button?.textContent;
@@ -387,14 +399,14 @@ async function saveMemberEdit(event) {
 }
 
 async function deleteMember(id) {
-  if (memberAccess() !== 'full') return memberToast('Este acesso é somente para visualização.', 'error');
+  if (memberAccess() !== 'full') return memberToast('Este acesso não permite alterações.', 'error');
   const v = memberRows.find(row => row.id === id);
   if (!v) return;
   if (!window.confirm(`Apagar ${v.full_name}?\n\nSe já tiver votado, os votos associados também serão apagados. Esta ação não pode ser desfeita.`)) return;
-  const entered = window.prompt('Confirme o PIN principal para apagar este membro:');
+  const entered = window.prompt('Confirme o código do Administrador Absoluto para apagar este membro:');
   if (entered === null) return;
   const pin = String(entered).replace(/\D/g, '').slice(0, 6);
-  if (pin.length !== 6) return memberToast('O PIN de confirmação deve ter 6 dígitos.', 'error');
+  if (pin.length !== 6) return memberToast('O código de confirmação deve ter 6 dígitos.', 'error');
   try {
     const data = await membersApi('delete', { voter_id: id, confirmation_pin: pin });
     memberToast(data.message || 'Membro apagado.', 'success');
@@ -416,18 +428,20 @@ function printMembers() {
   let lastZone = null;
   const body = [];
   for (const v of rows) {
-    const delegation = v.delegation || 'Sem delegação';
-    const zone = v.zone || 'Sem zona indicada';
+    const delegation = memberDisplayDelegation(v);
+    const zone = memberDisplayZone(v);
     if (delegation !== lastDelegation) {
-      body.push(`<tr class="delegation"><td colspan="6">Delegação: ${memberEscape(delegation)}</td></tr>`);
+      const label = isNationalDirection(delegation) ? NATIONAL_DIRECTION : `Delegação: ${delegation}`;
+      body.push(`<tr class="delegation"><td colspan="6">${memberEscape(label)}</td></tr>`);
       lastDelegation = delegation;
       lastZone = null;
     }
-    if (zone !== lastZone) {
-      body.push(`<tr class="zone"><td colspan="6">Zona: ${memberEscape(zone)}</td></tr>`);
+    if (zone && zone !== lastZone && !(isNationalDirection(delegation) && isNationalDirection(zone))) {
+      const zoneLabel = isNationalDirection(zone) ? NATIONAL_DIRECTION : `Zona: ${zone}`;
+      body.push(`<tr class="zone"><td colspan="6">${memberEscape(zoneLabel)}</td></tr>`);
       lastZone = zone;
     }
-    body.push(`<tr><td>${memberEscape(v.member_number || '—')}</td><td>${memberEscape(v.full_name)}</td><td>${memberEscape(v.phone || '—')}</td><td>${memberEscape(v.delegation || '—')}</td><td>${memberEscape(v.zone || '—')}</td><td>${v.active ? 'Autorizado' : 'Inativo'}</td></tr>`);
+    body.push(`<tr><td>${memberEscape(v.member_number || '—')}</td><td>${memberEscape(v.full_name)}</td><td>${memberEscape(v.phone || '—')}</td><td>${memberEscape(delegation)}</td><td>${memberEscape(zone || '—')}</td><td>${v.active ? 'Autorizado' : 'Inativo'}</td></tr>`);
   }
   const popup = window.open('', '_blank', 'width=1000,height=760');
   if (!popup) return memberToast('O navegador bloqueou a janela de impressão.', 'error');
@@ -439,8 +453,6 @@ function printMembers() {
   popup.document.close();
 }
 
-// Interceta apenas os formulários de membros para aplicar as novas regras de
-// numeração, delegação/zona e deteção de duplicados antes dos handlers antigos.
 document.addEventListener('submit', event => {
   if (event.target?.id === 'voterForm') {
     event.preventDefault();
@@ -466,6 +478,13 @@ document.addEventListener('click', event => {
   if (edit) {
     event.preventDefault();
     openMemberEdit(edit.dataset.memberEdit);
+    return;
+  }
+  const viewCode = event.target.closest?.('[data-member-view-code]');
+  if (viewCode) {
+    event.preventDefault();
+    if (memberAccess() !== 'full') return;
+    window.dispatchEvent(new CustomEvent('axinene:generate-view-code', { detail: { voterId: viewCode.dataset.memberViewCode } }));
     return;
   }
   const del = event.target.closest?.('[data-member-delete]');
