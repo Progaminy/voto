@@ -21,9 +21,7 @@ function applyCoordinationTerminology() {
   setLabelText('voterDelegation', 'Coordenação');
   setLabelText('memberEditDelegation', 'Coordenação');
   useNationalDirectionWhenEmpty('voterDelegation');
-  useNationalDirectionWhenEmpty('voterZone');
   useNationalDirectionWhenEmpty('memberEditDelegation');
-  useNationalDirectionWhenEmpty('memberEditZone');
 
   const bulkHelp = document.querySelector('#bulkVoterForm')?.closest('.form-card')?.querySelector('.form-help');
   if (bulkHelp) {
@@ -47,12 +45,12 @@ function applyCoordinationTerminology() {
       .replaceAll('Sem delegação', 'Direção Nacional');
   });
   document.querySelectorAll('.member-zone-row td').forEach(cell => {
-    cell.textContent = cell.textContent.replaceAll('Sem zona indicada', 'Direção Nacional');
+    cell.textContent = cell.textContent.replaceAll('Sem zona indicada', 'Zona não definida');
   });
 
   document.querySelectorAll('#voterTableBody tr:not(.member-group-row):not(.member-zone-row)').forEach(row => {
     if (row.children?.[3]?.textContent.trim() === '—') row.children[3].textContent = 'Direção Nacional';
-    if (row.children?.[4]?.textContent.trim() === '—') row.children[4].textContent = 'Direção Nacional';
+    // Zona vazia permanece vazia/—. Nunca é convertida em Direção Nacional.
   });
 
   const count = document.getElementById('voterCountLabel');
@@ -91,7 +89,7 @@ function printCoordinationList() {
       .replaceAll('Delegação', 'Coordenação')
       .replaceAll('delegação', 'coordenação')
       .replaceAll('Sem delegação', 'Direção Nacional')
-      .replaceAll('Sem zona indicada', 'Direção Nacional');
+      .replaceAll('Sem zona indicada', 'Zona não definida');
   });
 
   const election = document.getElementById('adminElectionSelect')?.selectedOptions?.[0]?.textContent?.trim() || 'Comissão Eleitoral Interna — AXINENE';
