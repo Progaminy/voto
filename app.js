@@ -29,6 +29,17 @@ accessPolicyStyles.textContent = `
       font:700 18px/1.4 Arial,sans-serif;
       color:#111;
     }
+    body.admin-direct-print-blocked #adminApp,
+    body.admin-direct-print-blocked #publicApp,
+    body.admin-direct-print-blocked .site-header,
+    body.admin-direct-print-blocked .site-footer { display:none !important; }
+    body.admin-direct-print-blocked::after {
+      content:'No painel administrativo, use apenas os botões “Imprimir lista de membros” ou “Imprimir resultados”.';
+      display:block;
+      padding:40px;
+      font:700 18px/1.4 Arial,sans-serif;
+      color:#111;
+    }
   }
 `;
 document.head.appendChild(accessPolicyStyles);
@@ -87,6 +98,11 @@ window.fetch = async (input, init = {}) => {
   return response;
 };
 
+window.addEventListener('beforeprint', () => {
+  if (location.hash === '#admin') document.body.classList.add('admin-direct-print-blocked');
+});
+window.addEventListener('afterprint', () => document.body.classList.remove('admin-direct-print-blocked'));
+
 await import('./app-core.js?v=20260901-2400');
 await import('./member-only-verification.js?v=20260901-2400');
 await import('./public-candidate-catalog.js?v=20260901-2400');
@@ -94,6 +110,7 @@ await import('./public-position-tabs.js?v=20260901-2600');
 await import('./page-customization.js?v=20260901-2600');
 await import('./page-card-theme.js?v=20260901-2600');
 await import('./public-results.js?v=20260901-3000');
+await import('./public-results-print.js?v=20260901-3100');
 
 let adminExtrasLoaded = false;
 async function loadAdminExtras() {
@@ -101,9 +118,9 @@ async function loadAdminExtras() {
   adminExtrasLoaded = true;
   await import('./admin-position-edit-core.js?v=20260901-2400');
   await import('./admin-sensitive-confirm.js?v=20260901-2700');
-  await import('./print-report-table.js?v=20260901-2400');
   await import('./admin-access-codes.js?v=20260901-2900');
   await import('./admin-result-publication.js?v=20260901-3000');
+  await import('./admin-print-results.js?v=20260901-3100');
   applyAccessLevel();
 }
 
