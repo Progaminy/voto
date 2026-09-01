@@ -10,6 +10,10 @@ const accessEscape = (value = '') => String(value)
   .replaceAll('>', '&gt;')
   .replaceAll('"', '&quot;')
   .replaceAll("'", '&#039;');
+const accessMemberNumberValue = value => {
+  const match = String(value || '').match(/AX-(\d+)/i);
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+};
 
 let accessCodes = [];
 let accessMembers = [];
@@ -41,7 +45,7 @@ async function accessApi(action, payload = {}) {
     headers: {
       'Content-Type': 'application/json',
       apikey: ACCESS_CODES_SUPABASE_KEY,
-      'x-client-info': 'axinene-voto-access-codes/1.0'
+      'x-client-info': 'axinene-voto-access-codes/1.1'
     },
     cache: 'no-store',
     body: JSON.stringify({ action, token, election_id: accessElectionId(), ...payload })
@@ -77,10 +81,59 @@ function installAccessCodeStyles() {
     .access-block-btn { border:1px solid #c9d8e6; background:#fff; color:var(--blue-700); }
     .access-delete-btn { border:1px solid #efc4c4; background:#fff8f8; color:#a52a2a; }
     .access-empty { padding:16px; color:var(--muted); text-align:center; }
+    .generated-access-dialog { width:min(440px,calc(100vw - 26px)); border:0; border-radius:18px; padding:0; box-shadow:0 24px 70px rgba(0,0,0,.24); }
+    .generated-access-dialog::backdrop { background:rgba(5,24,45,.55); }
+    .generated-access-card { padding:24px; }
+    .generated-access-card h2 { margin:0 0 5px; }
+    .generated-access-card p { color:var(--muted); }
+    .generated-access-code { display:block; margin:18px 0; padding:14px; border:1px solid #bfe3ca; border-radius:12px; background:#f3fff7; font-size:28px; font-weight:900; text-align:center; letter-spacing:.16em; }
+    .generated-access-actions { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
     body.admin-readonly #adminAccessCodesCard { display:none !important; }
     @media(max-width:680px){ .access-code-create{grid-template-columns:1fr}.access-code-create .btn{width:100%} }
   `;
   document.head.appendChild(style);
+}
+
+function ensureGeneratedAccessDialog() {
+  let dialog = document.getElementById('generatedAccessDialog');
+  if (dialog) return dialog;
+  dialog = document.createElement('dialog');
+  dialog.id = 'generatedAccessDialog';
+  dialog.className = 'generated-access-dialog';
+  dialog.innerHTML = `
+    <div class="generated-access-card">
+      <h2>Código gerado</h2>
+      <p id="generatedAccessMember">Membro</p>
+      <code id="generatedAccessCode" class="generated-access-code">——</code>
+      <p>Copie o código agora. Depois ele ficará protegido e será mostrado apenas parcialmente na lista de acessos.</p>
+      <div class="generated-access-actions">
+        <button id="generatedAccessCopy" class="btn btn-primary" type="button">Copiar código</button>
+        <button id="generatedAccessClose" class="btn btn-ghost" type="button">Fechar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(dialog);
+  document.getElementById('generatedAccessClose')?.addEventListener('click', () => dialog.close());
+  document.getElementById('generatedAccessCopy')?.addEventListener('click', async () => {
+    const code = document.getElementById('generatedAccessCode')?.textContent?.trim() || '';
+    if (!/^\d{6}$/.test(code)) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      accessToast('Código copiado.', 'success');
+    } catch {
+      accessToast('Não foi possível copiar automaticamente.', 'error');
+    }
+  });
+  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+  return dialog;
+}
+
+function showGeneratedAccessCode(code, member = null) {
+  const dialog = ensureGeneratedAccessDialog();
+  const codeEl = document.getElementById('generatedAccessCode');
+  const memberEl = document.getElementById('generatedAccessMember');
+  if (codeEl) codeEl.textContent = code || '——';
+  if (memberEl) memberEl.textContent = member ? `${member.member_number || 'Sem número'} — ${member.full_name}` : 'Código de acesso';
+  dialog.showModal();
 }
 
 function ensureAccessCodeUI() {
@@ -93,7 +146,7 @@ function ensureAccessCodeUI() {
   card.className = 'card access-codes-card';
   card.innerHTML = `
     <h2>Acessos de visualização</h2>
-    <p class="access-codes-intro">Os Administradores Absolutos podem gerar códigos de 6 dígitos ligados a um membro. Esses códigos permitem apenas visualizar. Não permitem editar, apagar, imprimir nem administrar outros acessos.</p>
+    <p class="access-codes-intro">Os Administradores Absolutos podem gerar códigos de 6 dígitos ligados a um membro. Esses códigos permitem consultar sem editar, apagar ou imprimir.</p>
     <div class="access-code-create">
       <label>Membro que receberá o código
         <select id="accessCodeMemberSelect"><option value="">Carregando membros…</option></select>
@@ -140,7 +193,9 @@ function formatAccessDate(value) {
 function renderAccessMembers() {
   const select = document.getElementById('accessCodeMemberSelect');
   if (!select) return;
-  const active = accessMembers.filter(m => m.active !== false);
+  const active = accessMembers
+    .filter(m => m.active !== false)
+    .sort((a, b) => accessMemberNumberValue(a.member_number) - accessMemberNumberValue(b.member_number) || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt', { sensitivity: 'base' }));
   select.innerHTML = '<option value="">Selecione um membro</option>' + active.map(member => {
     const label = `${member.member_number || 'Sem número'} — ${member.full_name}`;
     return `<option value="${accessEscape(member.id)}">${accessEscape(label)}</option>`;
@@ -153,11 +208,11 @@ function renderAccessCodes(absoluteCount = 0) {
   if (stats) {
     const active = accessCodes.filter(code => code.active).length;
     const blocked = accessCodes.length - active;
-    stats.textContent = `${absoluteCount} Administrador(es) Absoluto(s) ativo(s) · ${active} código(s) de visualização ativo(s) · ${blocked} bloqueado(s)`;
+    stats.textContent = `${absoluteCount} Administrador(es) Absoluto(s) ativo(s) · ${active} código(s) ativo(s) · ${blocked} bloqueado(s)`;
   }
   if (!body) return;
   if (!accessCodes.length) {
-    body.innerHTML = '<tr><td colspan="7" class="access-empty">Ainda não existem códigos de visualização gerados.</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" class="access-empty">Ainda não existem códigos gerados.</td></tr>';
     return;
   }
 
@@ -200,33 +255,39 @@ async function refreshAccessCodes() {
   }
 }
 
-async function generateViewCode() {
+async function generateViewCodeForVoter(voterId, sourceButton = null) {
   if (!accessIsAbsolute()) return accessToast('Apenas Administradores Absolutos podem gerar códigos.', 'error');
-  const select = document.getElementById('accessCodeMemberSelect');
-  const voterId = select?.value || '';
   if (!voterId) return accessToast('Selecione um membro.', 'error');
-  const button = document.getElementById('generateViewCodeBtn');
-  const old = button?.textContent;
-  if (button) { button.disabled = true; button.textContent = 'Gerando…'; }
+  const old = sourceButton?.textContent;
+  if (sourceButton) { sourceButton.disabled = true; sourceButton.textContent = 'Gerando…'; }
   try {
     const data = await accessApi('generateViewCode', { voter_id: voterId });
+    const member = accessMembers.find(item => item.id === voterId) || null;
     const box = document.getElementById('generatedViewCodeBox');
     const value = document.getElementById('generatedViewCodeValue');
     if (value) value.textContent = data.code || '——';
     box?.classList.remove('hidden');
+    showGeneratedAccessCode(data.code, member);
     accessToast(data.message || 'Código gerado.', 'success', 5500);
     await refreshAccessCodes();
   } catch (error) {
     accessToast(error.message || 'Não foi possível gerar o código.', 'error');
   } finally {
-    if (button) { button.disabled = false; button.textContent = old || 'Gerar código de visualização'; }
+    if (sourceButton) { sourceButton.disabled = false; sourceButton.textContent = old || 'Gerar código'; }
   }
+}
+
+async function generateViewCode() {
+  const select = document.getElementById('accessCodeMemberSelect');
+  const voterId = select?.value || '';
+  const button = document.getElementById('generateViewCodeBtn');
+  await generateViewCodeForVoter(voterId, button);
 }
 
 async function toggleViewCode(id, active) {
   if (!accessIsAbsolute()) return;
   const verb = active ? 'desbloquear' : 'bloquear';
-  if (!window.confirm(`Deseja ${verb} este código de visualização?${active ? '' : '\n\nAo bloquear, qualquer sessão aberta com ele será encerrada.'}`)) return;
+  if (!window.confirm(`Deseja ${verb} este código?${active ? '' : '\n\nAo bloquear, qualquer sessão aberta com ele será encerrada.'}`)) return;
   try {
     const data = await accessApi('toggleViewCode', { code_id: id, active });
     accessToast(data.message || 'Estado atualizado.', 'success');
@@ -240,7 +301,7 @@ async function deleteViewCode(id) {
   if (!accessIsAbsolute()) return;
   const item = accessCodes.find(code => code.id === id);
   const who = item ? `${item.member_name}${item.member_number ? ` (${item.member_number})` : ''}` : 'este membro';
-  if (!window.confirm(`Apagar definitivamente o código de visualização de ${who}?\n\nA sessão correspondente será encerrada e o código deixará de funcionar.`)) return;
+  if (!window.confirm(`Apagar definitivamente o código de ${who}?\n\nA sessão correspondente será encerrada e o código deixará de funcionar.`)) return;
   try {
     const data = await accessApi('deleteViewCode', { code_id: id });
     accessToast(data.message || 'Código eliminado.', 'success');
@@ -251,9 +312,18 @@ async function deleteViewCode(id) {
 }
 
 ensureAccessCodeUI();
+ensureGeneratedAccessDialog();
 
 document.addEventListener('click', event => {
   if (event.target.closest?.('[data-admin-view="settings"]')) setTimeout(refreshAccessCodes, 60);
+});
+
+window.addEventListener('axinene:generate-view-code', async event => {
+  if (!accessIsAbsolute()) return;
+  const voterId = event.detail?.voterId || '';
+  if (!accessMembers.length) await refreshAccessCodes();
+  const button = document.querySelector(`[data-member-view-code="${CSS.escape(voterId)}"]`);
+  await generateViewCodeForVoter(voterId, button);
 });
 
 document.getElementById('adminElectionSelect')?.addEventListener('change', () => setTimeout(refreshAccessCodes, 80));
