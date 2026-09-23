@@ -6,7 +6,7 @@ let locationCatalog = [];
 
 const mlEscape = (value='') => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const mlKey = (value='') => String(value).trim().replace(/\s+/g,' ').toLowerCase();
-const mlAbsolute = () => sessionStorage.getItem(MEMBER_LOCATIONS_LEVEL_KEY) === 'full';
+const mlAbsolute = () => ['full','super'].includes(sessionStorage.getItem(MEMBER_LOCATIONS_LEVEL_KEY) || '');
 function mlToast(message,type='info',timeout=4200){const r=document.getElementById('toastRegion');if(!r)return;const e=document.createElement('div');e.className=`toast ${type}`;e.textContent=message;r.appendChild(e);setTimeout(()=>e.remove(),timeout);}
 async function mlApi(action,payload={}){
   const token=sessionStorage.getItem(MEMBER_LOCATIONS_SESSION_KEY)||'';
