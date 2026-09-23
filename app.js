@@ -110,7 +110,7 @@ await import('./public-results.js?v=20260902-0400');
 await import('./public-results-print.js?v=20260902-0300');
 
 let adminExtrasLoaded=false;
-async function loadAdminExtras(){if(adminExtrasLoaded||location.hash!=='#admin'||!isPrivilegedAccess())return;adminExtrasLoaded=true;await import('./admin-position-edit-core.js?v=20260901-2400');await import('./admin-sensitive-confirm.js?v=20260901-2700');await import('./admin-access-codes.js?v=20260901-2900');await import('./admin-access-code-copy.js?v=20260901-3200');await import('./admin-result-publication.js?v=20260902-0300');await import('./admin-result-homepage.js?v=20260902-0400');await import('./admin-print-results.js?v=20260902-0300');if(currentAccessLevel()==='super'){await import('./admin-super-absolute.js?v=20260923-1345');await import('./admin-super-ui.js?v=20260923-1425');}applyAccessLevel();}
+async function loadAdminExtras(){if(adminExtrasLoaded||location.hash!=='#admin'||!isPrivilegedAccess())return;adminExtrasLoaded=true;await import('./admin-position-edit-core.js?v=20260901-2400');await import('./admin-sensitive-confirm.js?v=20260901-2700');await import('./admin-access-codes.js?v=20260901-2900');await import('./admin-access-code-copy.js?v=20260901-3200');await import('./admin-result-publication.js?v=20260902-0300');await import('./admin-result-homepage.js?v=20260902-0400');await import('./admin-print-results.js?v=20260902-0300');if(currentAccessLevel()==='super'){await import('./admin-super-absolute.js?v=20260923-1438');await import('./admin-super-ui.js?v=20260923-1438');}applyAccessLevel();}
 let memberManagementLoaded=false;
 async function loadMemberManagement(){
   if(memberManagementLoaded||location.hash!=='#admin'||!isPrivilegedAccess())return;
