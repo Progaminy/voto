@@ -5,7 +5,7 @@ const COPY_CODE_SESSION_KEY = 'axinene_admin_pin_session';
 const COPY_CODE_LEVEL_KEY = 'axinene_admin_access_level';
 
 function copyCodeIsAbsolute() {
-  return sessionStorage.getItem(COPY_CODE_LEVEL_KEY) === 'full';
+  return ['full', 'super'].includes(sessionStorage.getItem(COPY_CODE_LEVEL_KEY) || '');
 }
 function copyCodeElectionId() {
   return document.getElementById('adminElectionSelect')?.value || '';
