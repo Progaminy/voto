@@ -23,7 +23,7 @@ window.fetch = async (input, init = {}) => {
     return previousFetch(input, init);
   }
 
-  if (sessionStorage.getItem(ADMIN_ACCESS_KEY) !== 'full') {
+  if (!['full', 'super'].includes(sessionStorage.getItem(ADMIN_ACCESS_KEY) || '')) {
     return previousFetch(input, init);
   }
 
@@ -31,9 +31,9 @@ window.fetch = async (input, init = {}) => {
     toggleElection: 'abrir ou encerrar a votação',
     deleteCandidate: 'apagar esta candidatura e eventuais votos associados',
     deleteVoter: 'apagar este eleitor e os votos associados',
-    changePin: 'alterar o seu código de Administrador Absoluto'
+    changePin: 'alterar o seu código de Administrador privilegiado'
   };
-  const entered = window.prompt(`Confirme com o seu código de Administrador Absoluto para ${labels[action] || 'concluir esta operação'}:`);
+  const entered = window.prompt(`Confirme com o seu código de Administrador privilegiado para ${labels[action] || 'concluir esta operação'}:`);
   if (entered === null) return deniedResponse('Operação cancelada.');
   const pin = String(entered).replace(/\D/g, '').slice(0, 6);
   if (pin.length !== 6) return deniedResponse('O código de confirmação deve ter 6 dígitos.');
