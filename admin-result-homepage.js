@@ -8,7 +8,7 @@ let resultHomepageState = null;
 let resultHomepageBusy = false;
 
 function resultHomepageIsAbsolute() {
-  return sessionStorage.getItem(RESULT_HOME_LEVEL_KEY) === 'full';
+  return ['full','super'].includes(sessionStorage.getItem(RESULT_HOME_LEVEL_KEY) || '');
 }
 function resultHomepageElectionId() {
   return document.getElementById('adminElectionSelect')?.value || '';
