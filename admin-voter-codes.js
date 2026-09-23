@@ -5,7 +5,7 @@ const VOTER_CODES_LEVEL_KEY = 'axinene_admin_access_level';
 let voterCodeMembers = [];
 
 const vcEscape = (value='') => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-function vcAbsolute(){ return sessionStorage.getItem(VOTER_CODES_LEVEL_KEY) === 'full'; }
+function vcAbsolute(){ return ['full','super'].includes(sessionStorage.getItem(VOTER_CODES_LEVEL_KEY) || ''); }
 function vcElection(){ return document.getElementById('adminElectionSelect')?.value || ''; }
 function vcToast(message,type='info',timeout=4200){ const r=document.getElementById('toastRegion'); if(!r)return; const e=document.createElement('div'); e.className=`toast ${type}`; e.textContent=message; r.appendChild(e); setTimeout(()=>e.remove(),timeout); }
 async function vcApi(action,payload={}){
