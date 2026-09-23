@@ -49,12 +49,14 @@ document.head.appendChild(accessPolicyStyles);
 function getRequestAction(init={}){try{if(typeof init.body==='string')return JSON.parse(init.body)?.action||'';}catch{}return '';}
 function currentAccessLevel(){return sessionStorage.getItem(ADMIN_ACCESS_KEY)||'';}
 function isReadonlyAccess(){return currentAccessLevel()==='readonly';}
+function isPrivilegedAccess(){return currentAccessLevel()==='full'||currentAccessLevel()==='super';}
 function accessDeniedResponse(message='Este código permite apenas consultar informações.'){return Promise.resolve(new Response(JSON.stringify({ok:false,message,access_level:'readonly'}),{status:403,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}}));}
 function showReadonlyDenied(){const region=document.getElementById('toastRegion');if(!region)return;const el=document.createElement('div');el.className='toast error';el.textContent='Este código é apenas para consulta. Nenhuma alteração é permitida.';region.appendChild(el);setTimeout(()=>el.remove(),4200);}
 function applyAccessLevel(level=currentAccessLevel()){
   if(!document.body)return;
   document.body.classList.toggle('admin-readonly',level==='readonly');
-  document.body.classList.toggle('admin-full',level==='full');
+  document.body.classList.toggle('admin-full',level==='full'||level==='super');
+  document.body.classList.toggle('admin-super',level==='super');
   const readonly=level==='readonly';
   document.querySelectorAll('#positionForm, #candidateForm, #voterForm, #bulkVoterForm, #electionForm, #changePinForm').forEach(form=>form.closest('.form-card, .settings-card')?.classList.toggle('readonly-hidden',readonly));
   document.querySelector('[data-admin-view="settings"]')?.classList.toggle('readonly-hidden',readonly);
@@ -65,7 +67,7 @@ function applyAccessLevel(level=currentAccessLevel()){
   document.getElementById('toggleElectionBtn')?.classList.toggle('readonly-hidden',readonly);
   document.querySelectorAll('.delete-candidate, .delete-voter, .position-edit-btn, .member-edit-btn, .member-delete-btn, .member-view-code-btn, [data-member-view-code], #printMembersBtn, #printResultsBtn, #adminAccessCodesCard, #voterCodeCard, #memberLocationCard, #announceResultsBtn, #resultRuleCard, #resultPodiumCard, #commissionCard').forEach(el=>el.classList.toggle('readonly-hidden',readonly));
 }
-window.axineneSetAdminAccessLevel=level=>{if(level==='readonly'||level==='full')sessionStorage.setItem(ADMIN_ACCESS_KEY,level);else sessionStorage.removeItem(ADMIN_ACCESS_KEY);applyAccessLevel(level||'');};
+window.axineneSetAdminAccessLevel=level=>{if(level==='readonly'||level==='full'||level==='super')sessionStorage.setItem(ADMIN_ACCESS_KEY,level);else sessionStorage.removeItem(ADMIN_ACCESS_KEY);applyAccessLevel(level||'');};
 const READONLY_VOTE_ADMIN_ACTIONS=new Set(['login','logout','dashboard']);
 window.fetch=async(input,init={})=>{
   const url=typeof input==='string'?input:input?.url||'';
@@ -89,7 +91,7 @@ window.fetch=async(input,init={})=>{
   let requestInit=init;
   if(isAdminCall){const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));headers.set('apikey',SUPABASE_PUBLIC_KEY);headers.set('x-client-info','axinene-voto/stable-20260902-coordination-neighborhood');requestInit={...init,headers};}
   const response=await originalFetch(input,requestInit);
-  if(isAdminCall){try{const payload=await response.clone().json();if(payload?.access_level==='readonly'||payload?.access_level==='full'){sessionStorage.setItem(ADMIN_ACCESS_KEY,payload.access_level);applyAccessLevel(payload.access_level);if(payload.access_level==='full')setTimeout(()=>loadAdminExtras(),0);}if((action==='logout'&&response.ok)||(response.status===401&&action!=='login')){sessionStorage.removeItem(ADMIN_ACCESS_KEY);applyAccessLevel('');}}catch{}}
+  if(isAdminCall){try{const payload=await response.clone().json();if(payload?.access_level==='readonly'||payload?.access_level==='full'||payload?.access_level==='super'){sessionStorage.setItem(ADMIN_ACCESS_KEY,payload.access_level);applyAccessLevel(payload.access_level);if(payload.access_level==='full'||payload.access_level==='super')setTimeout(()=>loadAdminExtras(),0);}if((action==='logout'&&response.ok)||(response.status===401&&action!=='login')){sessionStorage.removeItem(ADMIN_ACCESS_KEY);applyAccessLevel('');}}catch{}}
   return response;
 };
 document.addEventListener('submit',event=>{if(!isReadonlyAccess()||!event.target.closest?.('#adminApp'))return;if(event.target.id==='adminLoginForm')return;event.preventDefault();event.stopImmediatePropagation();showReadonlyDenied();},true);
@@ -108,10 +110,10 @@ await import('./public-results.js?v=20260902-0400');
 await import('./public-results-print.js?v=20260902-0300');
 
 let adminExtrasLoaded=false;
-async function loadAdminExtras(){if(adminExtrasLoaded||location.hash!=='#admin'||currentAccessLevel()!=='full')return;adminExtrasLoaded=true;await import('./admin-position-edit-core.js?v=20260901-2400');await import('./admin-sensitive-confirm.js?v=20260901-2700');await import('./admin-access-codes.js?v=20260901-2900');await import('./admin-access-code-copy.js?v=20260901-3200');await import('./admin-result-publication.js?v=20260902-0300');await import('./admin-result-homepage.js?v=20260902-0400');await import('./admin-print-results.js?v=20260902-0300');applyAccessLevel();}
+async function loadAdminExtras(){if(adminExtrasLoaded||location.hash!=='#admin'||!isPrivilegedAccess())return;adminExtrasLoaded=true;await import('./admin-position-edit-core.js?v=20260901-2400');await import('./admin-sensitive-confirm.js?v=20260901-2700');await import('./admin-access-codes.js?v=20260901-2900');await import('./admin-access-code-copy.js?v=20260901-3200');await import('./admin-result-publication.js?v=20260902-0300');await import('./admin-result-homepage.js?v=20260902-0400');await import('./admin-print-results.js?v=20260902-0300');if(currentAccessLevel()==='super')await import('./admin-super-absolute.js?v=20260923-1345');applyAccessLevel();}
 let memberManagementLoaded=false;
 async function loadMemberManagement(){
-  if(memberManagementLoaded||location.hash!=='#admin'||currentAccessLevel()!=='full')return;
+  if(memberManagementLoaded||location.hash!=='#admin'||!isPrivilegedAccess())return;
   memberManagementLoaded=true;
   const NativeMutationObserver=window.MutationObserver;
   class StableMutationObserver extends NativeMutationObserver{observe(target,options={}){if(target===document.body)return;return super.observe(target,options);}}
@@ -122,5 +124,5 @@ async function loadMemberManagement(){
   applyAccessLevel();
 }
 window.addEventListener('hashchange',()=>{loadAdminExtras();applyAccessLevel();});
-document.addEventListener('click',event=>{if(currentAccessLevel()==='full'&&event.target.closest?.('[data-admin-view="voters"]'))setTimeout(()=>loadMemberManagement(),0);},true);
+document.addEventListener('click',event=>{if(isPrivilegedAccess()&&event.target.closest?.('[data-admin-view="voters"]'))setTimeout(()=>loadMemberManagement(),0);},true);
 await loadAdminExtras();applyAccessLevel();
