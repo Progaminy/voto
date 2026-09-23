@@ -188,7 +188,7 @@ function ensureMemberUI() {
 }
 
 function applyMemberAccessMode() {
-  const full = memberAccess() === 'full';
+  const full = ['full','super'].includes(memberAccess());
   document.getElementById('printMembersBtn')?.classList.toggle('readonly-hidden', !full);
   const editForm = document.getElementById('memberEditForm');
   if (editForm) editForm.querySelector('button[type="submit"]')?.classList.toggle('readonly-hidden', !full);
@@ -268,7 +268,7 @@ function renderMembers() {
       html.push(`<tr class="member-zone-row"><td colspan="7">${memberEscape(zoneLabel)}</td></tr>`);
       lastZone = zone;
     }
-    const actions = memberAccess() === 'full'
+    const actions = ['full','super'].includes(memberAccess())
       ? `<div class="member-action-cell"><button class="member-edit-btn" type="button" data-member-edit="${v.id}">Editar</button><button class="member-view-code-btn" type="button" data-member-view-code="${v.id}">Gerar código</button><button class="member-delete-btn" type="button" data-member-delete="${v.id}">Apagar</button></div>`
       : '';
     html.push(`<tr>
