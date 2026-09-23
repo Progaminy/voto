@@ -1,6 +1,6 @@
 const SUPER_URL = 'https://uvypcuixxrjikjaduvyo.supabase.co';
 const SUPER_KEY = 'sb_publishable_BTEfqQcnOfeZiVXjS1q3DQ_EFWeyMRj';
-const SUPER_EDGE = \`\${SUPER_URL}/functions/v1/vote-admin\`;
+const SUPER_EDGE = `${SUPER_URL}/functions/v1/vote-admin`;
 const SUPER_SESSION = 'axinene_admin_pin_session';
 const SUPER_LEVEL = 'axinene_admin_access_level';
 
@@ -13,7 +13,7 @@ const fmtDate = value => {
 };
 function toast(message,type='info'){
   const region=document.getElementById('toastRegion');if(!region)return;
-  const el=document.createElement('div');el.className=\`toast \${type}\`;el.textContent=message;region.appendChild(el);
+  const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=message;region.appendChild(el);
   setTimeout(()=>el.remove(),4800);
 }
 async function api(action,payload={}){
@@ -30,7 +30,7 @@ async function api(action,payload={}){
 }
 function installStyles(){
   if(document.getElementById('superAbsoluteStyles'))return;
-  const s=document.createElement('style');s.id='superAbsoluteStyles';s.textContent=\`
+  const s=document.createElement('style');s.id='superAbsoluteStyles';s.textContent=`
   .super-card{border:1px solid var(--line);background:#fff;margin-bottom:18px;box-shadow:0 10px 28px rgba(15,23,42,.06)}
   .super-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
   .super-head h2{margin:7px 0 4px}.super-head p{max-width:780px}
@@ -46,21 +46,21 @@ function installStyles(){
   .super-audit{max-height:460px;overflow:auto}.super-mini{font-size:11px;color:var(--muted)}.super-current{font-weight:900;color:#047857}.super-session-current{background:#ecfdf5}
   @media(max-width:820px){.super-grid{grid-template-columns:1fr 1fr}.super-create,.super-own-pin{grid-template-columns:1fr}.super-create .btn,.super-own-pin .btn{width:100%}}
   @media(max-width:520px){.super-grid{grid-template-columns:1fr}}
-  \`;document.head.appendChild(s);
+  `;document.head.appendChild(s);
 }
 let state={super_admins:[],absolute_admins:[],view_codes:[],audit:[],sessions:[],current_session_id:null};
 
 function codeCell(row){
-  if(row.full_code)return \`<code class="super-code">\${esc(row.full_code)}</code> <button class="btn btn-ghost" type="button" data-super-copy="\${esc(row.full_code)}">Copiar</button>\`;
-  return \`<span class="super-legacy">Protegido ••••\${esc(row.code_hint||'••')}<br>PIN antigo não recuperável</span>\`;
+  if(row.full_code)return `<code class="super-code">${esc(row.full_code)}</code> <button class="btn btn-ghost" type="button" data-super-copy="${esc(row.full_code)}">Copiar</button>`;
+  return `<span class="super-legacy">Protegido ••••${esc(row.code_hint||'••')}<br>PIN antigo não recuperável</span>`;
 }
 function actionButtons(row,type){
   const next=!row.active;
-  return \`<div class="super-actions">
-    <button class="btn btn-ghost" type="button" data-super-reset="\${esc(row.id)}" data-type="\${type}">Mudar PIN</button>
-    <button class="btn btn-ghost" type="button" data-super-toggle="\${esc(row.id)}" data-type="\${type}" data-active="\${next}">\${row.active?'Bloquear':'Desbloquear'}</button>
-    <button class="btn btn-ghost" type="button" data-super-delete="\${esc(row.id)}" data-type="\${type}">Apagar</button>
-  </div>\`;
+  return `<div class="super-actions">
+    <button class="btn btn-ghost" type="button" data-super-reset="${esc(row.id)}" data-type="${type}">Mudar PIN</button>
+    <button class="btn btn-ghost" type="button" data-super-toggle="${esc(row.id)}" data-type="${type}" data-active="${next}">${row.active?'Bloquear':'Desbloquear'}</button>
+    <button class="btn btn-ghost" type="button" data-super-delete="${esc(row.id)}" data-type="${type}">Apagar</button>
+  </div>`;
 }
 function actionName(value){
   const names={
@@ -92,47 +92,47 @@ function render(){
   const activeView=state.view_codes.filter(x=>x.active).length;
   const recoverable=[...state.super_admins,...state.absolute_admins,...state.view_codes].filter(x=>x.full_code).length;
   card.querySelector('#superStats').innerHTML=
-    \`<div class="super-stat"><strong>\${activeAbs}</strong><span>Absolutos ativos</span></div>
-     <div class="super-stat"><strong>\${activeView}</strong><span>Visualizações ativas</span></div>
-     <div class="super-stat"><strong>\${state.sessions.length}</strong><span>Sessões ativas</span></div>
-     <div class="super-stat"><strong>\${recoverable}</strong><span>PINs completos disponíveis</span></div>\`;
+    `<div class="super-stat"><strong>${activeAbs}</strong><span>Absolutos ativos</span></div>
+     <div class="super-stat"><strong>${activeView}</strong><span>Visualizações ativas</span></div>
+     <div class="super-stat"><strong>${state.sessions.length}</strong><span>Sessões ativas</span></div>
+     <div class="super-stat"><strong>${recoverable}</strong><span>PINs completos disponíveis</span></div>`;
 
   const me=card.querySelector('#superSelfBody');
-  me.innerHTML=state.super_admins.length?state.super_admins.map(r=>\`<tr>
-    <td><strong>\${esc(r.label||'Administrador Super Absoluto')}</strong><div class="super-mini">Nível máximo</div></td>
-    <td>\${codeCell(r)}</td><td class="super-state">\${r.active?'Ativo':'Bloqueado'}</td><td>\${esc(fmtDate(r.last_used_at))}</td>
-  </tr>\`).join(''):'<tr><td colspan="4">Credencial Super não encontrada.</td></tr>';
+  me.innerHTML=state.super_admins.length?state.super_admins.map(r=>`<tr>
+    <td><strong>${esc(r.label||'Administrador Super Absoluto')}</strong><div class="super-mini">Nível máximo</div></td>
+    <td>${codeCell(r)}</td><td class="super-state">${r.active?'Ativo':'Bloqueado'}</td><td>${esc(fmtDate(r.last_used_at))}</td>
+  </tr>`).join(''):'<tr><td colspan="4">Credencial Super não encontrada.</td></tr>';
 
   const abs=card.querySelector('#superAbsoluteBody');
-  abs.innerHTML=state.absolute_admins.length?state.absolute_admins.map(r=>\`<tr>
-    <td><strong>\${esc(r.label||'Administrador Absoluto')}</strong></td><td>\${codeCell(r)}</td>
-    <td class="super-state">\${r.active?'Ativo':'Bloqueado'}</td><td>\${esc(fmtDate(r.last_used_at))}</td><td>\${actionButtons(r,'absolute')}</td>
-  </tr>\`).join(''):'<tr><td colspan="5">Nenhum Administrador Absoluto.</td></tr>';
+  abs.innerHTML=state.absolute_admins.length?state.absolute_admins.map(r=>`<tr>
+    <td><strong>${esc(r.label||'Administrador Absoluto')}</strong></td><td>${codeCell(r)}</td>
+    <td class="super-state">${r.active?'Ativo':'Bloqueado'}</td><td>${esc(fmtDate(r.last_used_at))}</td><td>${actionButtons(r,'absolute')}</td>
+  </tr>`).join(''):'<tr><td colspan="5">Nenhum Administrador Absoluto.</td></tr>';
 
   const views=card.querySelector('#superViewBody');
-  views.innerHTML=state.view_codes.length?state.view_codes.map(r=>\`<tr>
-    <td><strong>\${esc(r.member_name||'Membro')}</strong><div class="super-mini">\${esc(r.member_number||'')}</div></td><td>\${codeCell(r)}</td>
-    <td class="super-state">\${r.active?'Ativo':'Bloqueado'}</td><td>\${esc(fmtDate(r.last_used_at))}</td><td>\${actionButtons(r,'view')}</td>
-  </tr>\`).join(''):'<tr><td colspan="5">Nenhum código de visualização.</td></tr>';
+  views.innerHTML=state.view_codes.length?state.view_codes.map(r=>`<tr>
+    <td><strong>${esc(r.member_name||'Membro')}</strong><div class="super-mini">${esc(r.member_number||'')}</div></td><td>${codeCell(r)}</td>
+    <td class="super-state">${r.active?'Ativo':'Bloqueado'}</td><td>${esc(fmtDate(r.last_used_at))}</td><td>${actionButtons(r,'view')}</td>
+  </tr>`).join(''):'<tr><td colspan="5">Nenhum código de visualização.</td></tr>';
 
   const sessions=card.querySelector('#superSessionsBody');
   sessions.innerHTML=state.sessions.length?state.sessions.map(s=>{
     const current=s.id===state.current_session_id;
-    return \`<tr class="\${current?'super-session-current':''}">
-      <td><strong>\${esc(credentialLabel(s))}</strong><div class="super-mini">\${esc(s.credential_type||'')} · \${esc(s.access_level||'')}</div></td>
-      <td>\${esc(fmtDate(s.created_at))}</td><td>\${esc(fmtDate(s.last_seen_at))}</td><td>\${esc(fmtDate(s.expires_at))}</td>
-      <td>\${current?'<span class="super-current">Sessão atual</span>':\`<button class="btn btn-ghost" type="button" data-super-revoke-session="\${esc(s.id)}">Revogar</button>\`}</td>
-    </tr>\`;
+    return `<tr class="${current?'super-session-current':''}">
+      <td><strong>${esc(credentialLabel(s))}</strong><div class="super-mini">${esc(s.credential_type||'')} · ${esc(s.access_level||'')}</div></td>
+      <td>${esc(fmtDate(s.created_at))}</td><td>${esc(fmtDate(s.last_seen_at))}</td><td>${esc(fmtDate(s.expires_at))}</td>
+      <td>${current?'<span class="super-current">Sessão atual</span>':`<button class="btn btn-ghost" type="button" data-super-revoke-session="${esc(s.id)}">Revogar</button>`}</td>
+    </tr>`;
   }).join(''):'<tr><td colspan="5">Nenhuma sessão administrativa ativa.</td></tr>';
 
   const audit=card.querySelector('#superAuditBody');
-  audit.innerHTML=state.audit.length?state.audit.map(a=>\`<tr>
-    <td>\${esc(fmtDate(a.created_at))}</td>
-    <td><strong>\${esc(a.actor_label||a.actor_type||'Sistema')}</strong><div class="super-mini">\${esc(a.actor_type||'')}</div></td>
-    <td>\${esc(actionName(a.action))}</td>
-    <td>\${esc(a.target_type||'—')} \${a.target_id?'<span class="super-mini">'+esc(a.target_id).slice(0,10)+'…</span>':''}</td>
-    <td class="super-mini">\${esc(a.details?JSON.stringify(a.details):'')}</td>
-  </tr>\`).join(''):'<tr><td colspan="5">Ainda não há ações registadas.</td></tr>';
+  audit.innerHTML=state.audit.length?state.audit.map(a=>`<tr>
+    <td>${esc(fmtDate(a.created_at))}</td>
+    <td><strong>${esc(a.actor_label||a.actor_type||'Sistema')}</strong><div class="super-mini">${esc(a.actor_type||'')}</div></td>
+    <td>${esc(actionName(a.action))}</td>
+    <td>${esc(a.target_type||'—')} ${a.target_id?'<span class="super-mini">'+esc(a.target_id).slice(0,10)+'…</span>':''}</td>
+    <td class="super-mini">${esc(a.details?JSON.stringify(a.details):'')}</td>
+  </tr>`).join(''):'<tr><td colspan="5">Ainda não há ações registadas.</td></tr>';
 }
 function ensurePanel(){
   if(!isSuper())return;
@@ -140,7 +140,7 @@ function ensurePanel(){
   const host=document.getElementById('adminViewSuper')||document.getElementById('adminViewSettings');
   if(!host||document.getElementById('superAbsoluteCard'))return;
   const card=document.createElement('section');card.id='superAbsoluteCard';card.className='card super-card';
-  card.innerHTML=\`
+  card.innerHTML=`
     <div class="super-head"><div><span class="super-badge">Super Absoluto</span><h2>Centro de controlo</h2><p class="form-help">PINs, sessões, histórico e administração dos níveis abaixo. PINs antigos continuam protegidos; PINs criados ou alterados depois da ativação do Super podem ser vistos completos.</p></div><button id="superRefreshBtn" class="btn btn-secondary" type="button">Atualizar dados</button></div>
     <div id="superStats" class="super-grid"></div>
 
@@ -168,7 +168,7 @@ function ensurePanel(){
 
     <div class="super-section" data-super-section="audit"><h3>Histórico de ações</h3>
       <div class="super-table-wrap super-audit"><table class="super-table"><thead><tr><th>Data</th><th>Quem</th><th>Ação</th><th>Alvo</th><th>Detalhes</th></tr></thead><tbody id="superAuditBody"></tbody></table></div>
-    </div>\`;
+    </div>`;
   host.prepend(card);
   card.querySelector('#superRefreshBtn')?.addEventListener('click',refresh);
   card.querySelector('#superCreateAbsoluteBtn')?.addEventListener('click',createAbsolute);
@@ -177,7 +177,7 @@ function ensurePanel(){
 }
 function showGenerated(code,label='Novo PIN'){
   const box=document.getElementById('superGeneratedBox');if(!box)return;
-  box.innerHTML=\`<strong>\${esc(label)}</strong><div><code>\${esc(code)}</code> <button class="btn btn-ghost" type="button" data-super-copy="\${esc(code)}">Copiar</button></div><div class="super-mini">Este PIN fica disponível ao Super Absoluto porque foi criado depois da ativação deste nível.</div>\`;
+  box.innerHTML=`<strong>${esc(label)}</strong><div><code>${esc(code)}</code> <button class="btn btn-ghost" type="button" data-super-copy="${esc(code)}">Copiar</button></div><div class="super-mini">Este PIN fica disponível ao Super Absoluto porque foi criado depois da ativação deste nível.</div>`;
   box.classList.remove('hidden');
 }
 async function refresh(){
@@ -186,7 +186,7 @@ async function refresh(){
 }
 async function createAbsolute(){
   const label=document.getElementById('superNewAbsoluteLabel')?.value?.trim()||'Administrador Absoluto';
-  try{const data=await api('superCreateAbsolute',{label});showGenerated(data.code,\`PIN de \${label}\`);document.getElementById('superNewAbsoluteLabel').value='';await refresh();toast('Administrador Absoluto criado.','success');}catch(e){toast(e.message,'error');}
+  try{const data=await api('superCreateAbsolute',{label});showGenerated(data.code,`PIN de ${label}`);document.getElementById('superNewAbsoluteLabel').value='';await refresh();toast('Administrador Absoluto criado.','success');}catch(e){toast(e.message,'error');}
 }
 async function changeOwnPin(){
   const first=(document.getElementById('superOwnPin')?.value||'').replace(/\D/g,'').slice(0,6);
