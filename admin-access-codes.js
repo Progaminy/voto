@@ -30,7 +30,7 @@ function accessToast(message, type = 'info', timeout = 4600) {
 }
 
 function accessIsAbsolute() {
-  return sessionStorage.getItem(ACCESS_CODES_LEVEL_KEY) === 'full';
+  return ['full', 'super'].includes(sessionStorage.getItem(ACCESS_CODES_LEVEL_KEY) || '');
 }
 
 function accessElectionId() {
