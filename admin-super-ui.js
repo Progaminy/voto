@@ -2,14 +2,14 @@ const SUPER_UI_LEVEL_KEY='axinene_admin_access_level';
 const SUPER_UI_SESSION_KEY='axinene_admin_pin_session';
 const SUPER_UI_URL='https://uvypcuixxrjikjaduvyo.supabase.co';
 const SUPER_UI_KEY='sb_publishable_BTEfqQcnOfeZiVXjS1q3DQ_EFWeyMRj';
-const SUPER_UI_BRANDING_EDGE=\`\${SUPER_UI_URL}/functions/v1/vote-branding\`;
+const SUPER_UI_BRANDING_EDGE=`${SUPER_UI_URL}/functions/v1/vote-branding`;
 const superUiIsActive=()=>sessionStorage.getItem(SUPER_UI_LEVEL_KEY)==='super';
 
 function installSuperUiStyles(){
   if(document.getElementById('superCleanUiStyles'))return;
   const style=document.createElement('style');
   style.id='superCleanUiStyles';
-  style.textContent=\`
+  style.textContent=`
     body.admin-super .admin-tabs{gap:6px}
     body.admin-super .admin-tab[data-admin-view="super"]{font-weight:900;border-color:#111827;background:#111827;color:#fff}
     #adminViewSuper{display:block}
@@ -36,7 +36,7 @@ function installSuperUiStyles(){
       .super-ui-toolbar{display:grid;grid-template-columns:1fr 1fr}.super-ui-toolbar .btn{width:100%}
       .super-system-grid{grid-template-columns:1fr}
     }
-  \`;
+  `;
   document.head.appendChild(style);
 }
 function superSectionDescription(key,title){
